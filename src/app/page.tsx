@@ -19,28 +19,24 @@ const events: Event[] = [
 		subtitle: "January 25, 2024",
 		description:
 			"Join us for a day of exciting tech talks and networking with industry leaders.",
-		buttonLabel: "Learn More",
 	},
 	{
 		title: "Web Development Workshop",
 		subtitle: "February 10, 2024",
 		description:
 			"A hands-on workshop on modern web development practices and tools.",
-		buttonLabel: "Register",
 	},
 	{
 		title: "Design Thinking Seminar",
 		subtitle: "March 15, 2024",
 		description:
 			"Learn the fundamentals of design thinking and how to apply it to your projects.",
-		buttonLabel: "Sign Up",
 	},
 	{
 		title: "AI and Machine Learning Symposium",
 		subtitle: "April 20, 2024",
 		description:
 			"Explore the latest advancements in AI and machine learning at our annual symposium.",
-		buttonLabel: "Get Tickets",
 	},
 ];
 
