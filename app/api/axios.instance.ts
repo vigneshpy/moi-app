@@ -19,7 +19,15 @@ const loadCookies = async () => {
 	try {
 		const storedCookies = await SecureStore.getItemAsync("cookies");
 		if (storedCookies) {
-			const cookies = JSON.parse(storedCookies); // Convert string back to object
+			let cookies;
+			try {
+				cookies = JSON.parse(storedCookies); // Convert string back to object
+			} catch (parseError) {
+				console.error("Failed to parse cookies:", parseError);
+				// Consider clearing invalid cookie data
+				await SecureStore.deleteItemAsync("cookies");
+				return;
+			}
 			cookies.forEach((cookie: any) => {
 				cookieJar.setCookieSync(cookie, API_BASE_URL);
 			});
