@@ -5,19 +5,50 @@ import {
 	TouchableOpacity,
 	Text,
 	useColorScheme,
+	View as RNView,
+	Alert,
 } from "react-native";
 import { View } from "@/components/Themed";
 import { useRouter, useFocusEffect } from "expo-router";
+import { api } from "../api/axios.instance";
+import { DEFAULT_COUNTRY_CODE } from "../constants";
 
 export default function MobileAuth() {
 	const [phone, setPhone] = useState("");
+	const [isLoading, setIsLoading] = useState(false);
 	const colorScheme = useColorScheme();
 	const router = useRouter();
 
-	const handleSendOTP = () => {
-		console.log("Sending OTP to:", phone);
-		router.replace(`/auth/OTPScreen?phone=${encodeURIComponent(phone)}`);
-		// Implement OTP logic here
+	const handleSendOTP = async () => {
+		if (phone.length !== 10) {
+			Alert.alert(
+				"Invalid Phone",
+				"Please enter a valid 10-digit phone number"
+			);
+			return;
+		}
+
+		setIsLoading(true);
+		try {
+			console.log("Sending OTP to:", DEFAULT_COUNTRY_CODE + phone);
+			const response = await api.post("/otp/send", {
+				phone_number: DEFAULT_COUNTRY_CODE + phone,
+			});
+			console.log("OTP sent successfully:", response.data);
+			router.replace(
+				`/auth/OTPScreen?phone=${encodeURIComponent(
+					DEFAULT_COUNTRY_CODE + phone
+				)}`
+			);
+		} catch (error: any) {
+			console.error(
+				"Failed to send OTP:",
+				error.response?.data || error.message
+			);
+			Alert.alert("Error", "Failed to send OTP. Please try again.");
+		} finally {
+			setIsLoading(false);
+		}
 	};
 
 	return (
@@ -26,29 +57,53 @@ export default function MobileAuth() {
 				Login/Signup
 			</Text>
 			<View style={styles.inputContainer}>
-				<TextInput
-					style={[styles.input, colorScheme === "dark" && styles.darkInput]}
-					placeholder="Mobile Number"
-					placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
-					value={phone}
-					onChangeText={(text) => {
-						if (text.length <= 10) {
-							setPhone(text.replace(/[^0-9]/g, ""));
-						}
-					}}
-					keyboardType="phone-pad"
-				/>
+				<RNView style={styles.phoneInputContainer}>
+					<RNView
+						style={[
+							styles.countryCodeContainer,
+							colorScheme === "dark" && styles.darkInput,
+						]}
+					>
+						<Text
+							style={[
+								styles.countryCodeText,
+								colorScheme === "dark" && styles.darkText,
+							]}
+						>
+							{DEFAULT_COUNTRY_CODE}
+						</Text>
+					</RNView>
+					<TextInput
+						style={[
+							styles.phoneInput,
+							colorScheme === "dark" && styles.darkInput,
+						]}
+						placeholder="Mobile Number"
+						placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
+						value={phone}
+						onChangeText={(text) => {
+							if (text.length <= 10) {
+								setPhone(text.replace(/[^0-9]/g, ""));
+							}
+						}}
+						keyboardType="phone-pad"
+						maxLength={10}
+					/>
+				</RNView>
 
 				<TouchableOpacity
 					style={[
 						styles.button,
 						colorScheme === "dark" ? styles.darkButton : styles.lightButton,
-						phone.length !== 10 && styles.disabledButton,
+						(phone.length !== 10 || isLoading) && styles.disabledButton,
 					]}
 					onPress={handleSendOTP}
-					disabled={phone.length !== 10}
+					disabled={phone.length !== 10 || isLoading}
+					activeOpacity={0.7}
 				>
-					<Text style={styles.buttonText}>Send OTP</Text>
+					<Text style={styles.buttonText}>
+						{isLoading ? "Sending..." : "Send OTP"}
+					</Text>
 				</TouchableOpacity>
 			</View>
 		</View>
@@ -59,6 +114,36 @@ const styles = StyleSheet.create({
 	inputContainer: {
 		width: "100%",
 		marginBottom: 20,
+	},
+	phoneInputContainer: {
+		flexDirection: "row",
+		width: "100%",
+		marginBottom: 12,
+	},
+	countryCodeContainer: {
+		height: 50,
+		borderWidth: 1,
+		borderColor: "#ddd",
+		borderRightWidth: 0,
+		borderTopLeftRadius: 8,
+		borderBottomLeftRadius: 8,
+		paddingHorizontal: 10,
+		justifyContent: "center",
+		backgroundColor: "#f5f5f5",
+	},
+	countryCodeText: {
+		color: "#000",
+		fontSize: 16,
+	},
+	phoneInput: {
+		flex: 1,
+		height: 50,
+		borderWidth: 1,
+		borderColor: "#ddd",
+		borderTopRightRadius: 8,
+		borderBottomRightRadius: 8,
+		paddingHorizontal: 10,
+		color: "#000",
 	},
 	input: {
 		width: "100%",
