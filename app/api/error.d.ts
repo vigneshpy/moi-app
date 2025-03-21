@@ -1,0 +1,3 @@
+interface APIError {
+	error: string;
+}

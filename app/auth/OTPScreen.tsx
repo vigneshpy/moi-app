@@ -4,6 +4,8 @@ import { View } from "@/components/Themed";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "@/store/authStore";
 import { useColorScheme } from "react-native"; // Import useColorScheme
+import { api } from "../api/axios.instance";
+import Toast from "react-native-toast-message";
 
 export default function OTPScreen() {
 	const [otp, setOtp] = useState("");
@@ -12,14 +14,35 @@ export default function OTPScreen() {
 	const { setIsAuthenticated } = useAuthStore();
 	const colorScheme = useColorScheme(); // Get the current color scheme
 
-	const handleVerifyOTP = () => {
-		if (otp.length === 6) {
+	const handleVerifyOTP = async () => {
+		try {
+			const otpResponse = await api.post("/otp/verify", {
+				otp: otp,
+				phone_number: phone,
+			});
+			console.log("otpResponse: ", otpResponse);
+
+			const setCookieHeader = otpResponse.headers["set-cookie"];
+
+			if (setCookieHeader) {
+				console.log("Received Cookies:", setCookieHeader);
+			}
+
 			setIsAuthenticated(true);
-			router.replace("/(tabs)");
+			Toast.show({
+				type: "info",
+				text1: "Verified",
+			});
+			return router.replace("/(tabs)");
+		} catch (error: any) {
+			Toast.show({
+				type: "error",
+				text1: "Something went wrong",
+			});
+			console.warn("something went wrong", error);
 		}
 	};
 
-	// Define styles based on the color scheme
 	const styles = createStyles(colorScheme);
 
 	return (
@@ -44,12 +67,13 @@ export default function OTPScreen() {
 			>
 				<Text style={styles.buttonText}>Verify OTP</Text>
 			</TouchableOpacity>
+			<Toast />
 		</View>
 	);
 }
 
 // Function to create styles based on the color scheme
-const createStyles = (colorScheme) => {
+const createStyles = (colorScheme: string | null | undefined) => {
 	return StyleSheet.create({
 		container: {
 			flex: 1,

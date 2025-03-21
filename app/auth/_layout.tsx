@@ -10,7 +10,6 @@ import { useEffect, useState } from "react";
 
 export default function RootLayout() {
 	const colorScheme = useColorScheme();
-	const isAuthenticated = useAuthStore((state) => state.isAuthenticated);
 	const [ready, setReady] = useState(false);
 
 	// Wait until after mount to ensure Zustand state is loaded properly
