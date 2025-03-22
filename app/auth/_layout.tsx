@@ -27,6 +27,10 @@ export default function RootLayout() {
 			<Stack screenOptions={{ headerShown: false }}>
 				<Stack.Screen name="auth/OTPScreen" options={{ headerShown: false }} />
 				<Stack.Screen name="auth/MobileAuth" options={{ headerShown: false }} />
+				<Stack.Screen
+					name="auth/LoginScreen"
+					options={{ headerShown: false }}
+				/>
 			</Stack>
 		</ThemeProvider>
 	);

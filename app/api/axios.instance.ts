@@ -5,9 +5,10 @@ import * as SecureStore from "expo-secure-store";
 import { API_BASE_URL } from "../constants";
 
 const cookieJar = new CookieJar();
-const saveCookies = async (cookies: any) => {
+const saveCookies = async (cookies: string[]) => {
 	try {
-		const cookieString = JSON.stringify(cookies); // Convert to string
+		// Save only relevant cookies as a JSON string
+		const cookieString = JSON.stringify(cookies);
 		await SecureStore.setItemAsync("cookies", cookieString);
 	} catch (error) {
 		console.error("Failed to save cookies:", error);
@@ -19,24 +20,19 @@ const loadCookies = async () => {
 	try {
 		const storedCookies = await SecureStore.getItemAsync("cookies");
 		if (storedCookies) {
-			let cookies;
-			try {
-				cookies = JSON.parse(storedCookies); // Convert string back to object
-			} catch (parseError) {
-				console.error("Failed to parse cookies:", parseError);
-				// Consider clearing invalid cookie data
-				await SecureStore.deleteItemAsync("cookies");
-				return;
-			}
-			cookies.forEach((cookie: any) => {
+			const cookies = JSON.parse(storedCookies);
+			cookies.forEach((cookie: string) => {
+				// Set cookies into the cookie jar
 				cookieJar.setCookieSync(cookie, API_BASE_URL);
 			});
+			console.log("Cookies loaded successfully");
+		} else {
+			console.log("No cookies found in storage.");
 		}
 	} catch (error) {
 		console.error("Failed to load cookies:", error);
 	}
 };
-
 // Load cookies when the app starts
 loadCookies();
 
@@ -44,20 +40,22 @@ export const api = wrapper(
 	axios.create({
 		baseURL: API_BASE_URL,
 		withCredentials: true,
-		jar: cookieJar,
+		jar: cookieJar, // Use cookieJar to store and send cookies with requests
 	})
 );
 
+// Intercept response to save cookies if present
 api.interceptors.response.use(
 	async (response) => {
-		// Extract cookies from the response headers
-		const setCookieHeader = response.headers["set-cookie"]; // Get cookies from headers
+		const setCookieHeader = response.headers["set-cookie"];
+		console.log("setCookieHeader: ", setCookieHeader);
 		if (setCookieHeader) {
-			await saveCookies(setCookieHeader); // Pass cookies to saveCookies function
+			await saveCookies(setCookieHeader); // Save the cookies from response
 		}
 		return response;
 	},
 	(error) => {
+		console.log("error: ", error);
 		return Promise.reject(error);
 	}
 );
