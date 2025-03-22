@@ -9,18 +9,21 @@ import {
 	Card,
 	Text,
 	Provider as PaperProvider,
-	useTheme,
+	Divider,
+	FAB,
 } from "react-native-paper";
+import { useNavigation } from "@react-navigation/native";
 import { api } from "@/app/api/axios.instance";
-import { API_BASE_URL } from "@/app/constants";
 import { useUserStore } from "@/store/useUserStore";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import { router } from "expo-router";
 
-export default function TabTwoScreen() {
+export default function EventListScreen() {
 	const [events, setEvents] = useState([]);
 	const [loading, setLoading] = useState(true);
 	const colorScheme = useColorScheme();
 	const { user } = useUserStore();
-	console.log("user: ", user);
+	const navigation = useNavigation();
 
 	const theme = {
 		...defaultTheme,
@@ -29,7 +32,7 @@ export default function TabTwoScreen() {
 	};
 
 	const fetchEvents = async () => {
-		const userID = user?.id || user?._id;
+		const userID = user?._id;
 		if (userID) {
 			try {
 				const response = await api.get(`/events/user/${userID}`);
@@ -43,23 +46,32 @@ export default function TabTwoScreen() {
 	};
 
 	useEffect(() => {
-		fetchEvents();
-	}, []);
+		const unsubscribe = navigation.addListener("focus", fetchEvents);
+		return unsubscribe;
+	}, [navigation]);
 
 	const renderItem = ({ item }: any) => (
 		<Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
 			<Card.Content>
-				<Text style={[{ color: theme.colors.text }]}>{item.event_name}</Text>
+				<Text style={[styles.title, { color: theme.colors.text }]}>
+					{item.event_name}
+				</Text>
+				<Divider style={styles.divider} />
 				<Text style={[styles.text, { color: theme.colors.text }]}>
-					📍 {item.location}
+					<MaterialCommunityIcons
+						name="map-marker"
+						size={16}
+						color={theme.colors.text}
+					/>{" "}
+					{item.location}
 				</Text>
 				<Text style={[styles.text, { color: theme.colors.text }]}>
-					📅 {new Date(item.event_date).toDateString()}
-				</Text>
-				<Text style={[styles.text, { color: theme.colors.text }]}>
-					{item.total_collected
-						? `💰 Total Collected: ₹${item.total_collected}`
-						: ""}
+					<MaterialCommunityIcons
+						name="calendar"
+						size={16}
+						color={theme.colors.text}
+					/>{" "}
+					{new Date(item.event_date).toDateString()}
 				</Text>
 			</Card.Content>
 		</Card>
@@ -72,6 +84,12 @@ export default function TabTwoScreen() {
 			>
 				{loading ? (
 					<ActivityIndicator size="large" color={theme.colors.primary} />
+				) : events.length === 0 ? (
+					<View style={styles.noEventsContainer}>
+						<Text style={styles.noEventsText}>
+							No events yet. Tap '+' to add one.
+						</Text>
+					</View>
 				) : (
 					<FlatList
 						data={events}
@@ -80,6 +98,15 @@ export default function TabTwoScreen() {
 						contentContainerStyle={styles.list}
 					/>
 				)}
+
+				<FAB
+					style={styles.fab}
+					icon="plus"
+					color="white"
+					onPress={() => {
+						router.push("/modal/events/AddEvents");
+					}}
+				/>
 			</View>
 		</PaperProvider>
 	);
@@ -110,13 +137,13 @@ const styles = {
 		padding: 10,
 	},
 	list: {
-		paddingBottom: 20,
+		paddingBottom: 80,
 	},
 	card: {
 		marginBottom: 10,
 		padding: 15,
 		borderRadius: 10,
-		elevation: 3,
+		elevation: 5,
 	},
 	title: {
 		fontSize: 18,
@@ -126,5 +153,20 @@ const styles = {
 	text: {
 		fontSize: 14,
 		marginBottom: 3,
+	},
+	noEventsContainer: {
+		flex: 1,
+		justifyContent: "center",
+		alignItems: "center",
+	},
+	noEventsText: {
+		fontSize: 16,
+		color: "#666",
+	},
+	fab: {
+		position: "absolute",
+		right: 20,
+		bottom: 20,
+		backgroundColor: "#6200ee",
 	},
 };

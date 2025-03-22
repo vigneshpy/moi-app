@@ -113,7 +113,7 @@ const ProfileScreen = () => {
 
 	const fetchUser = async () => {
 		try {
-			const userId = storeUser?.id;
+			const userId = storeUser?._id;
 			if (userId) {
 				const userResponse = await api.get(`/users/${userId}`);
 				const userDetails = userResponse.data;

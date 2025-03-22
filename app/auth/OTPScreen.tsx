@@ -12,7 +12,6 @@ export default function OTPScreen() {
 	const [otp, setOtp] = useState("");
 	const { phone, firstName, lastName, email } = useLocalSearchParams();
 	const router = useRouter();
-	const { setIsAuthenticated } = useAuthStore();
 	const { setUser } = useUserStore();
 	const colorScheme = useColorScheme(); // Get the current color scheme
 
