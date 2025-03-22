@@ -8,6 +8,7 @@ type User = {
 	password: string;
 	is_verified: Boolean;
 	email: string;
+	phone_number: string;
 } | null;
 
 type UserState = {

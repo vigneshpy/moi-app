@@ -13,11 +13,8 @@ import { useRouter, useFocusEffect } from "expo-router";
 import { api } from "../api/axios.instance";
 import { DEFAULT_COUNTRY_CODE } from "../constants";
 
-export default function MobileAuth() {
+export default function LoginScreen() {
 	const [userData, setUserData] = useState({
-		firstName: "",
-		lastName: "",
-		email: "",
 		phone: "",
 	});
 	const [isLoading, setIsLoading] = useState(false);
@@ -50,9 +47,6 @@ export default function MobileAuth() {
 
 			const queryParams = new URLSearchParams({
 				phone: DEFAULT_COUNTRY_CODE + userData.phone,
-				firstName: userData.firstName,
-				lastName: userData.lastName,
-				email: userData.email,
 			}).toString();
 
 			router.replace(`/auth/OTPScreen?${queryParams}`);
@@ -61,7 +55,6 @@ export default function MobileAuth() {
 				"Failed to send OTP:",
 				error.response?.data || error.message
 			);
-			Alert.alert("Error", "Failed to send OTP. Please try again.");
 		} finally {
 			setIsLoading(false);
 		}
@@ -70,43 +63,9 @@ export default function MobileAuth() {
 	return (
 		<View style={styles.container}>
 			<Text style={[styles.title, colorScheme === "dark" && styles.darkText]}>
-				Signup
+				Login
 			</Text>
 			<View style={styles.inputContainer}>
-				<RNView style={styles.nameInputContainer}>
-					<TextInput
-						style={[
-							styles.nameInput,
-							colorScheme === "dark" && styles.darkInput,
-						]}
-						placeholder="First Name"
-						placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
-						value={userData.firstName}
-						onChangeText={(text) => handleInputChange("firstName", text)}
-					/>
-
-					<TextInput
-						style={[
-							styles.nameInput,
-							colorScheme === "dark" && styles.darkInput,
-						]}
-						placeholder="Last Name"
-						placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
-						value={userData.lastName}
-						onChangeText={(text) => handleInputChange("lastName", text)}
-					/>
-				</RNView>
-
-				<TextInput
-					style={[styles.input, colorScheme === "dark" && styles.darkInput]}
-					placeholder="Email (Optional)"
-					placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
-					value={userData.email}
-					onChangeText={(text) => handleInputChange("email", text)}
-					keyboardType="email-address"
-					autoCapitalize="none"
-				/>
-
 				<RNView style={styles.phoneInputContainer}>
 					<RNView
 						style={[
@@ -158,7 +117,7 @@ export default function MobileAuth() {
 				</TouchableOpacity>
 				<TouchableOpacity
 					style={styles.signupLink}
-					onPress={() => router.push("/auth/LoginScreen")}
+					onPress={() => router.push("/auth/MobileAuth")}
 				>
 					<Text
 						style={[
@@ -166,7 +125,7 @@ export default function MobileAuth() {
 							colorScheme === "dark" && styles.darkText,
 						]}
 					>
-						Already having an account? Login
+						Signup Instead
 					</Text>
 				</TouchableOpacity>
 			</View>

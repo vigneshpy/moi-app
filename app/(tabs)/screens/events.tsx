@@ -28,18 +28,21 @@ export default function TabTwoScreen() {
 		colors: colorScheme === "dark" ? darkColors : lightColors,
 	};
 
-	useEffect(() => {
-		const fetchEvents = async () => {
+	const fetchEvents = async () => {
+		const userID = user?.id || user?._id;
+		if (userID) {
 			try {
-				const response = await api.get(`/events/user/${user?.id}`);
+				const response = await api.get(`/events/user/${userID}`);
 				setEvents(response.data);
 			} catch (error) {
 				console.error("Error fetching events:", error);
 			} finally {
 				setLoading(false);
 			}
-		};
+		}
+	};
 
+	useEffect(() => {
 		fetchEvents();
 	}, []);
 
@@ -54,7 +57,9 @@ export default function TabTwoScreen() {
 					📅 {new Date(item.event_date).toDateString()}
 				</Text>
 				<Text style={[styles.text, { color: theme.colors.text }]}>
-					💰 Total Collected: ₹{item.total_collected}
+					{item.total_collected
+						? `💰 Total Collected: ₹${item.total_collected}`
+						: ""}
 				</Text>
 			</Card.Content>
 		</Card>
