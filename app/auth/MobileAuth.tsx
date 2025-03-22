@@ -14,13 +14,25 @@ import { api } from "../api/axios.instance";
 import { DEFAULT_COUNTRY_CODE } from "../constants";
 
 export default function MobileAuth() {
-	const [phone, setPhone] = useState("");
+	const [userData, setUserData] = useState({
+		firstName: "",
+		lastName: "",
+		email: "",
+		phone: "",
+	});
 	const [isLoading, setIsLoading] = useState(false);
 	const colorScheme = useColorScheme();
 	const router = useRouter();
 
+	const handleInputChange = (field: string, value: string) => {
+		setUserData({
+			...userData,
+			[field]: field === "phone" ? value.replace(/[^0-9]/g, "") : value,
+		});
+	};
+
 	const handleSendOTP = async () => {
-		if (phone.length !== 10) {
+		if (userData.phone.length !== 10) {
 			Alert.alert(
 				"Invalid Phone",
 				"Please enter a valid 10-digit phone number"
@@ -30,16 +42,20 @@ export default function MobileAuth() {
 
 		setIsLoading(true);
 		try {
-			console.log("Sending OTP to:", DEFAULT_COUNTRY_CODE + phone);
+			console.log("Sending OTP to:", DEFAULT_COUNTRY_CODE + userData.phone);
 			const response = await api.post("/otp/send", {
-				phone_number: DEFAULT_COUNTRY_CODE + phone,
+				phone_number: DEFAULT_COUNTRY_CODE + userData.phone,
 			});
 			console.log("OTP sent successfully:", response.data);
-			router.replace(
-				`/auth/OTPScreen?phone=${encodeURIComponent(
-					DEFAULT_COUNTRY_CODE + phone
-				)}`
-			);
+
+			const queryParams = new URLSearchParams({
+				phone: DEFAULT_COUNTRY_CODE + userData.phone,
+				firstName: userData.firstName,
+				lastName: userData.lastName,
+				email: userData.email,
+			}).toString();
+
+			router.replace(`/auth/OTPScreen?${queryParams}`);
 		} catch (error: any) {
 			console.error(
 				"Failed to send OTP:",
@@ -54,9 +70,43 @@ export default function MobileAuth() {
 	return (
 		<View style={styles.container}>
 			<Text style={[styles.title, colorScheme === "dark" && styles.darkText]}>
-				Login/Signup
+				Signup
 			</Text>
 			<View style={styles.inputContainer}>
+				<RNView style={styles.nameInputContainer}>
+					<TextInput
+						style={[
+							styles.nameInput,
+							colorScheme === "dark" && styles.darkInput,
+						]}
+						placeholder="First Name"
+						placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
+						value={userData.firstName}
+						onChangeText={(text) => handleInputChange("firstName", text)}
+					/>
+
+					<TextInput
+						style={[
+							styles.nameInput,
+							colorScheme === "dark" && styles.darkInput,
+						]}
+						placeholder="Last Name"
+						placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
+						value={userData.lastName}
+						onChangeText={(text) => handleInputChange("lastName", text)}
+					/>
+				</RNView>
+
+				<TextInput
+					style={[styles.input, colorScheme === "dark" && styles.darkInput]}
+					placeholder="Email (Optional)"
+					placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
+					value={userData.email}
+					onChangeText={(text) => handleInputChange("email", text)}
+					keyboardType="email-address"
+					autoCapitalize="none"
+				/>
+
 				<RNView style={styles.phoneInputContainer}>
 					<RNView
 						style={[
@@ -80,10 +130,10 @@ export default function MobileAuth() {
 						]}
 						placeholder="Mobile Number"
 						placeholderTextColor={colorScheme === "dark" ? "#aaa" : "#555"}
-						value={phone}
+						value={userData.phone}
 						onChangeText={(text) => {
 							if (text.length <= 10) {
-								setPhone(text.replace(/[^0-9]/g, ""));
+								handleInputChange("phone", text);
 							}
 						}}
 						keyboardType="phone-pad"
@@ -95,10 +145,11 @@ export default function MobileAuth() {
 					style={[
 						styles.button,
 						colorScheme === "dark" ? styles.darkButton : styles.lightButton,
-						(phone.length !== 10 || isLoading) && styles.disabledButton,
+						(userData.phone.length !== 10 || isLoading) &&
+							styles.disabledButton,
 					]}
 					onPress={handleSendOTP}
-					disabled={phone.length !== 10 || isLoading}
+					disabled={userData.phone.length !== 10 || isLoading}
 					activeOpacity={0.7}
 				>
 					<Text style={styles.buttonText}>
@@ -115,6 +166,23 @@ const styles = StyleSheet.create({
 		width: "100%",
 		marginBottom: 20,
 	},
+
+	nameInputContainer: {
+		flexDirection: "row",
+		width: "100%",
+		marginBottom: 12,
+		justifyContent: "space-between",
+	},
+	nameInput: {
+		width: "48%",
+		height: 50,
+		borderWidth: 1,
+		borderColor: "#ddd",
+		borderRadius: 8,
+		paddingHorizontal: 10,
+		color: "#000",
+	},
+
 	phoneInputContainer: {
 		flexDirection: "row",
 		width: "100%",

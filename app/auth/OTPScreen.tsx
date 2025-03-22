@@ -6,12 +6,14 @@ import { useAuthStore } from "@/store/authStore";
 import { useColorScheme } from "react-native"; // Import useColorScheme
 import { api } from "../api/axios.instance";
 import Toast from "react-native-toast-message";
+import { useUserStore } from "@/store/useUserStore";
 
 export default function OTPScreen() {
 	const [otp, setOtp] = useState("");
-	const { phone } = useLocalSearchParams();
+	const { phone, firstName, lastName, email } = useLocalSearchParams();
 	const router = useRouter();
 	const { setIsAuthenticated } = useAuthStore();
+	const { setUser } = useUserStore();
 	const colorScheme = useColorScheme(); // Get the current color scheme
 
 	const handleVerifyOTP = async () => {
@@ -19,16 +21,13 @@ export default function OTPScreen() {
 			const otpResponse = await api.post("/otp/verify", {
 				otp: otp,
 				phone_number: phone,
+				first_name: firstName,
+				last_name: lastName,
+				email,
 			});
-			console.log("otpResponse: ", otpResponse);
+			const userData = otpResponse?.data?.user;
+			setUser(userData);
 
-			const setCookieHeader = otpResponse.headers["set-cookie"];
-
-			if (setCookieHeader) {
-				console.log("Received Cookies:", setCookieHeader);
-			}
-
-			setIsAuthenticated(true);
 			Toast.show({
 				type: "info",
 				text1: "Verified",
@@ -37,7 +36,7 @@ export default function OTPScreen() {
 		} catch (error: any) {
 			Toast.show({
 				type: "error",
-				text1: "Something went wrong",
+				text1: error,
 			});
 			console.warn("something went wrong", error);
 		}

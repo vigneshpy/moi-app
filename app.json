@@ -20,7 +20,8 @@
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
         "backgroundColor": "#ffffff"
-      }
+      },
+      "package": "com.vigneshpy.moiapp"
     },
     "web": {
       "bundler": "metro",
@@ -33,6 +34,15 @@
     ],
     "experiments": {
       "typedRoutes": true
-    }
+    },
+    "extra": {
+      "router": {
+        "origin": false
+      },
+      "eas": {
+        "projectId": "32b6fd32-b60b-4434-ad92-09588cc541fc"
+      }
+    },
+    "owner": "vigneshpy"
   }
 }
