@@ -20,7 +20,7 @@ export default function Index() {
 			checkAuth();
 			loadUser();
 		}
-	}, [checkAuth]);
+	}, [checkAuth, loadUser]);
 
 	if (isLoading) {
 		console.log("isLoading: ", isLoading);
