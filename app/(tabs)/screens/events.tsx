@@ -39,6 +39,8 @@ export default function TabTwoScreen() {
 			} finally {
 				setLoading(false);
 			}
+		} else {
+			setLoading(false);
 		}
 	};
 
