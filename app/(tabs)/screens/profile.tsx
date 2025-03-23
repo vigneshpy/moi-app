@@ -10,6 +10,7 @@ import {
 	ScrollView,
 	useColorScheme,
 	Text,
+	Alert,
 } from "react-native";
 import {
 	Appbar,
@@ -129,7 +130,6 @@ const ProfileScreen = () => {
 						},
 					});
 				}
-				console.log("userDetails: ", userDetails);
 			}
 		} catch (error: any) {
 			Toast.show({
@@ -174,7 +174,19 @@ const ProfileScreen = () => {
 					) : (
 						<Appbar.Action icon="close" onPress={handleCancel} />
 					)}
-					<Appbar.Action icon="power" onPress={handleLogout} />
+					<Appbar.Action
+						icon="power"
+						onPress={() => {
+							Alert.alert("Delete Event", `Are you sure you want to logout?`, [
+								{ text: "Cancel", style: "cancel" },
+								{
+									text: "Logout",
+									onPress: () => handleLogout(),
+									style: "destructive",
+								},
+							]);
+						}}
+					/>
 				</Appbar.Header>
 
 				<ScrollView>

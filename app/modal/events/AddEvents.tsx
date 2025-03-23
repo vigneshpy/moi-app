@@ -16,7 +16,7 @@ import DateTimePickerModal from "react-native-modal-datetime-picker";
 import * as ImagePicker from "expo-image-picker";
 
 import React from "react";
-export default function AddEvent() {
+export default function AddEvents() {
 	const [image, setImage] = useState<string | null>(null);
 
 	const [eventDetails, setEventDetails] = useState({
@@ -25,8 +25,6 @@ export default function AddEvent() {
 		location: "",
 		eventDate: new Date(),
 		generateRSVP: false,
-		generateCoverImage: false,
-		budget: "",
 	});
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
@@ -40,7 +38,6 @@ export default function AddEvent() {
 	const textColor = colorScheme === "dark" ? "#FFFFFF" : "#000000";
 
 	const handleTextChange = (field: string, value: string | boolean | Date) => {
-		console.log("value: ", value);
 		setEventDetails({
 			...eventDetails,
 			[field]: value,
@@ -48,12 +45,17 @@ export default function AddEvent() {
 	};
 
 	const pickImage = async () => {
+		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+		if (status !== "granted") {
+			alert("Permission denied!");
+			return;
+		}
+
 		const result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ImagePicker.MediaTypeOptions.Images,
 			allowsEditing: true,
 			quality: 0.8,
 		});
-
 		if (!result.canceled) {
 			setImage(result.assets[0].uri);
 		}
@@ -69,7 +71,6 @@ export default function AddEvent() {
 			formData.append("location", eventDetails.location);
 			formData.append("event_date", eventDetails.eventDate.toISOString());
 			formData.append("generate_rsvp", String(eventDetails.generateRSVP));
-			formData.append("budget", String(eventDetails.budget));
 			formData.append("user_id", user._id);
 
 			// Append cover image if selected
@@ -148,16 +149,6 @@ export default function AddEvent() {
 
 			<TextInput
 				mode="outlined"
-				label="Budget"
-				style={styles.input}
-				multiline
-				value={eventDetails.budget}
-				onChangeText={(value) => handleTextChange("budget", value)}
-				theme={theme}
-			/>
-
-			<TextInput
-				mode="outlined"
 				label="Location"
 				style={styles.input}
 				value={eventDetails.location}
@@ -188,7 +179,7 @@ export default function AddEvent() {
 				onCancel={hideDatePicker}
 			/>
 
-			{/* <Button title="Pick an Cover Image" onPress={pickImage} /> */}
+			<Button onPress={pickImage}>Pick a Cover Image</Button>
 
 			<View style={styles.switchContainer}>
 				<Text variant="bodyLarge" style={{ color: textColor }}>
@@ -197,18 +188,6 @@ export default function AddEvent() {
 				<Switch
 					value={eventDetails.generateRSVP}
 					onValueChange={(text: any) => handleTextChange("generateRSVP", text)}
-					theme={theme}
-				/>
-			</View>
-			<View style={styles.switchContainer}>
-				<Text variant="bodyLarge" style={{ color: textColor }}>
-					Generate Cover Image
-				</Text>
-				<Switch
-					value={eventDetails.generateCoverImage}
-					onValueChange={(text: any) =>
-						handleTextChange("generateCoverImage", text)
-					}
 					theme={theme}
 				/>
 			</View>
