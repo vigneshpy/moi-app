@@ -17,7 +17,15 @@ export default function RootLayout() {
 				{" "}
 				{/* Hide header for all screens */}
 				{isAuthenticated ? (
-					<Stack.Screen name="(tabs)" />
+					<>
+						<Stack.Screen name="(tabs)" />
+						<Stack.Screen
+							name="modal/events/AddEvents"
+							options={{
+								presentation: "modal",
+							}}
+						/>
+					</>
 				) : (
 					<>
 						<Stack.Screen name="auth/MobileAuth" />

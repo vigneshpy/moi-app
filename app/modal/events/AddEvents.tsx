@@ -1,0 +1,227 @@
+import { useState } from "react";
+import { View, StyleSheet, useColorScheme } from "react-native";
+import {
+	Button,
+	Text,
+	Switch,
+	TextInput,
+	MD3DarkTheme,
+	MD3LightTheme,
+} from "react-native-paper";
+import { useNavigation } from "@react-navigation/native";
+import { api } from "@/app/api/axios.instance";
+import { useUserStore } from "@/store/useUserStore";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
+import React from "react";
+export default function AddEvent() {
+	const [eventDetails, setEventDetails] = useState({
+		eventName: "",
+		eventDescription: "",
+		location: "",
+		eventDate: new Date(),
+		generateRSVP: false,
+		generateCoverImage: false,
+		budget: "",
+	});
+	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
+
+	const navigation = useNavigation();
+	const { user } = useUserStore();
+
+	const colorScheme = useColorScheme();
+	const theme = colorScheme === "dark" ? MD3DarkTheme : MD3LightTheme;
+
+	const backgroundColor = colorScheme === "dark" ? "#121212" : "#FFFFFF";
+	const textColor = colorScheme === "dark" ? "#FFFFFF" : "#000000";
+
+	const handleTextChange = (field: string, value: string | boolean | Date) => {
+		console.log("value: ", value);
+		setEventDetails({
+			...eventDetails,
+			[field]: value,
+		});
+	};
+
+	const addEvent = async () => {
+		try {
+			await api.post("/events/create", {
+				event_name: eventDetails.eventName,
+				description: eventDetails.eventDescription,
+				location: eventDetails.location,
+				event_date: eventDetails.eventDate.toISOString(),
+				generate_rsvp: eventDetails.generateRSVP,
+				cover_image: {
+					generate_cover_image: eventDetails.generateCoverImage,
+				},
+				budget: eventDetails.budget,
+				user_id: user?._id,
+			});
+			navigation.goBack();
+		} catch (error: any) {
+			console.error("Error adding event:", error?.message);
+		}
+	};
+
+	const showDatePicker = () => {
+		setDatePickerVisibility(true);
+	};
+
+	const hideDatePicker = () => {
+		setDatePickerVisibility(false);
+	};
+
+	const handleDateConfirm = (date: Date) => {
+		setEventDetails({
+			...eventDetails,
+			["eventDate"]: date,
+		});
+		hideDatePicker();
+	};
+
+	const formatDateTime = () => {
+		return `${eventDetails.eventDate?.toDateString()} at ${eventDetails.eventDate.toLocaleTimeString(
+			[],
+			{
+				hour: "2-digit",
+				minute: "2-digit",
+			}
+		)}`;
+	};
+
+	return (
+		<View style={[styles.container, { backgroundColor }]}>
+			<Text
+				variant="headlineMedium"
+				style={[styles.title, { color: textColor }]}
+			>
+				Add Event
+			</Text>
+
+			<TextInput
+				mode="outlined"
+				label="Event Name"
+				style={styles.input}
+				value={eventDetails.eventName}
+				onChangeText={(value) => handleTextChange("eventName", value)}
+				theme={theme}
+			/>
+
+			<TextInput
+				mode="outlined"
+				label="Description"
+				style={styles.input}
+				multiline
+				numberOfLines={3}
+				value={eventDetails.eventDescription}
+				onChangeText={(value) => handleTextChange("eventDescription", value)}
+				theme={theme}
+			/>
+
+			<TextInput
+				mode="outlined"
+				label="Budget"
+				style={styles.input}
+				multiline
+				value={eventDetails.budget}
+				onChangeText={(value) => handleTextChange("budget", value)}
+				theme={theme}
+			/>
+
+			<TextInput
+				mode="outlined"
+				label="Location"
+				style={styles.input}
+				value={eventDetails.location}
+				onChangeText={(value) => handleTextChange("location", value)}
+				theme={theme}
+			/>
+
+			<Text
+				variant="bodyLarge"
+				style={[styles.dateLabel, { color: textColor }]}
+			>
+				Event Date & Time
+			</Text>
+
+			<Button
+				mode="outlined"
+				onPress={showDatePicker}
+				style={styles.dateButton}
+				theme={theme}
+			>
+				{formatDateTime()}
+			</Button>
+
+			<DateTimePickerModal
+				isVisible={isDatePickerVisible}
+				mode="datetime"
+				onConfirm={handleDateConfirm}
+				onCancel={hideDatePicker}
+			/>
+
+			<View style={styles.switchContainer}>
+				<Text variant="bodyLarge" style={{ color: textColor }}>
+					RSVP Required
+				</Text>
+				<Switch
+					value={eventDetails.generateRSVP}
+					onValueChange={(text: any) => handleTextChange("generateRSVP", text)}
+					theme={theme}
+				/>
+			</View>
+			<View style={styles.switchContainer}>
+				<Text variant="bodyLarge" style={{ color: textColor }}>
+					Generate Cover Image
+				</Text>
+				<Switch
+					value={eventDetails.generateCoverImage}
+					onValueChange={(text: any) =>
+						handleTextChange("generateCoverImage", text)
+					}
+					theme={theme}
+				/>
+			</View>
+
+			<Button
+				mode="contained"
+				onPress={addEvent}
+				style={styles.button}
+				theme={theme}
+			>
+				Add Event
+			</Button>
+		</View>
+	);
+}
+
+const styles = StyleSheet.create({
+	container: {
+		flex: 1,
+		padding: 20,
+		justifyContent: "center",
+	},
+	title: {
+		marginBottom: 20,
+		fontWeight: "bold",
+		alignSelf: "center",
+	},
+	input: {
+		marginBottom: 16,
+	},
+	dateLabel: {
+		marginBottom: 8,
+	},
+	dateButton: {
+		marginBottom: 16,
+	},
+	button: {
+		marginTop: 16,
+		paddingVertical: 6,
+	},
+	switchContainer: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginVertical: 16,
+	},
+});
