@@ -39,11 +39,9 @@ export default function LoginScreen() {
 
 		setIsLoading(true);
 		try {
-			console.log("Sending OTP to:", DEFAULT_COUNTRY_CODE + userData.phone);
 			const response = await api.post("/otp/send", {
 				phone_number: DEFAULT_COUNTRY_CODE + userData.phone,
 			});
-			console.log("OTP sent successfully:", response.data);
 
 			const queryParams = new URLSearchParams({
 				phone: DEFAULT_COUNTRY_CODE + userData.phone,

@@ -12,21 +12,24 @@ import { useNavigation } from "@react-navigation/native";
 import { api } from "@/app/api/axios.instance";
 import { useUserStore } from "@/store/useUserStore";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+
+import * as ImagePicker from "expo-image-picker";
+
 import React from "react";
-export default function AddEvent() {
+export default function AddEvents() {
+	const [image, setImage] = useState<string | null>(null);
+
 	const [eventDetails, setEventDetails] = useState({
 		eventName: "",
 		eventDescription: "",
 		location: "",
 		eventDate: new Date(),
 		generateRSVP: false,
-		generateCoverImage: false,
-		budget: "",
 	});
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
 	const navigation = useNavigation();
-	const { user } = useUserStore();
+	const { user }: any = useUserStore();
 
 	const colorScheme = useColorScheme();
 	const theme = colorScheme === "dark" ? MD3DarkTheme : MD3LightTheme;
@@ -35,27 +38,54 @@ export default function AddEvent() {
 	const textColor = colorScheme === "dark" ? "#FFFFFF" : "#000000";
 
 	const handleTextChange = (field: string, value: string | boolean | Date) => {
-		console.log("value: ", value);
 		setEventDetails({
 			...eventDetails,
 			[field]: value,
 		});
 	};
 
+	const pickImage = async () => {
+		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
+		if (status !== "granted") {
+			alert("Permission denied!");
+			return;
+		}
+
+		const result = await ImagePicker.launchImageLibraryAsync({
+			mediaTypes: ImagePicker.MediaTypeOptions.Images,
+			allowsEditing: true,
+			quality: 0.8,
+		});
+		if (!result.canceled) {
+			setImage(result.assets[0].uri);
+		}
+	};
+
 	const addEvent = async () => {
 		try {
-			await api.post("/events/create", {
-				event_name: eventDetails.eventName,
-				description: eventDetails.eventDescription,
-				location: eventDetails.location,
-				event_date: eventDetails.eventDate.toISOString(),
-				generate_rsvp: eventDetails.generateRSVP,
-				cover_image: {
-					generate_cover_image: eventDetails.generateCoverImage,
-				},
-				budget: eventDetails.budget,
-				user_id: user?._id,
+			const formData = new FormData();
+
+			// Append event details
+			formData.append("event_name", eventDetails.eventName);
+			formData.append("description", eventDetails.eventDescription);
+			formData.append("location", eventDetails.location);
+			formData.append("event_date", eventDetails.eventDate.toISOString());
+			formData.append("generate_rsvp", String(eventDetails.generateRSVP));
+			formData.append("user_id", user._id);
+
+			// Append cover image if selected
+			if (image) {
+				formData.append("cover_image", {
+					uri: image,
+					name: `cover_${Date.now()}.jpg`,
+					type: "image/jpeg",
+				} as any);
+			}
+
+			await api.post("/events/create", formData, {
+				headers: { "Content-Type": "multipart/form-data" },
 			});
+
 			navigation.goBack();
 		} catch (error: any) {
 			console.error("Error adding event:", error?.message);
@@ -119,16 +149,6 @@ export default function AddEvent() {
 
 			<TextInput
 				mode="outlined"
-				label="Budget"
-				style={styles.input}
-				multiline
-				value={eventDetails.budget}
-				onChangeText={(value) => handleTextChange("budget", value)}
-				theme={theme}
-			/>
-
-			<TextInput
-				mode="outlined"
 				label="Location"
 				style={styles.input}
 				value={eventDetails.location}
@@ -159,6 +179,8 @@ export default function AddEvent() {
 				onCancel={hideDatePicker}
 			/>
 
+			<Button onPress={pickImage}>Pick a Cover Image</Button>
+
 			<View style={styles.switchContainer}>
 				<Text variant="bodyLarge" style={{ color: textColor }}>
 					RSVP Required
@@ -166,18 +188,6 @@ export default function AddEvent() {
 				<Switch
 					value={eventDetails.generateRSVP}
 					onValueChange={(text: any) => handleTextChange("generateRSVP", text)}
-					theme={theme}
-				/>
-			</View>
-			<View style={styles.switchContainer}>
-				<Text variant="bodyLarge" style={{ color: textColor }}>
-					Generate Cover Image
-				</Text>
-				<Switch
-					value={eventDetails.generateCoverImage}
-					onValueChange={(text: any) =>
-						handleTextChange("generateCoverImage", text)
-					}
 					theme={theme}
 				/>
 			</View>

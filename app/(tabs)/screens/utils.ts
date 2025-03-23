@@ -18,6 +18,7 @@ export const getCategoryIcon = (description: string) => {
 	const desc = description.toLowerCase();
 	if (desc.includes("party") || desc.includes("celebration"))
 		return "party-popper";
+
 	if (desc.includes("meeting") || desc.includes("conference"))
 		return "account-group";
 	if (desc.includes("dinner") || desc.includes("lunch"))

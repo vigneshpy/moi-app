@@ -1,11 +1,12 @@
 //@ts-nocheck
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import {
 	View,
 	ActivityIndicator,
 	FlatList,
 	useColorScheme,
 	TouchableOpacity,
+	Alert,
 } from "react-native";
 import {
 	Card,
@@ -15,6 +16,7 @@ import {
 	FAB,
 	Chip,
 	Badge,
+	Snackbar,
 } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
 import { api } from "@/app/api/axios.instance";
@@ -30,16 +32,26 @@ import {
 	getUpcomingEvents,
 } from "./utils";
 import React from "react";
+import Swipeable from "react-native-gesture-handler/Swipeable";
+import {
+	GestureHandlerRootView,
+	RectButton,
+} from "react-native-gesture-handler";
 
 export default function EventListScreen() {
 	const { events: eventsFromStore = [], setEvents: setEventInStore } =
 		useResourceStore((state) => state);
+
 	const [events, setEvents] = useState({
 		upcomingEvents: getUpcomingEvents(eventsFromStore),
 		pastEvents: getPastEvents(eventsFromStore),
 	});
+
 	const [loading, setLoading] = useState(true);
 	const [viewMode, setViewMode] = useState("upcoming");
+	const [snackbarVisible, setSnackbarVisible] = useState(false);
+	const [deletedEventName, setDeletedEventName] = useState("");
+	const rowRefs = useRef(new Map());
 
 	const colorScheme = useColorScheme();
 	const { user } = useUserStore();
@@ -73,7 +85,47 @@ export default function EventListScreen() {
 		}
 	};
 
-	const handleEventPress = (event: Event) => {
+	const deleteEvent = async (eventId, eventName) => {
+		try {
+			await api.delete(`/events/${eventId}`);
+			const allEvents = [
+				...(events.pastEvents || []),
+				...(events.upcomingEvents || []),
+			];
+			const updatedEvents = allEvents.filter((event) => event._id !== eventId);
+			const updatedAllEvents = {
+				upcomingEvents: getUpcomingEvents(updatedEvents),
+				pastEvents: getPastEvents(updatedEvents),
+			};
+
+			setEvents(updatedAllEvents);
+
+			setEventInStore(updatedEvents);
+
+			setDeletedEventName(eventName);
+			setSnackbarVisible(true);
+		} catch (error) {
+			console.error("Error deleting event:", error);
+			Alert.alert("Error", "Failed to delete the event. Please try again.");
+		}
+	};
+
+	const confirmDelete = (event) => {
+		Alert.alert(
+			"Delete Event",
+			`Are you sure you want to delete "${event.event_name}"?`,
+			[
+				{ text: "Cancel", style: "cancel" },
+				{
+					text: "Delete",
+					onPress: () => deleteEvent(event._id, event.event_name),
+					style: "destructive",
+				},
+			]
+		);
+	};
+
+	const handleEventPress = (event) => {
 		router.push({
 			pathname: "/modal/events/EventDetails",
 			params: { eventId: event._id },
@@ -85,7 +137,29 @@ export default function EventListScreen() {
 		return unsubscribe;
 	}, [navigation]);
 
+	const closeRow = (id) => {
+		if (rowRefs.current.has(id)) {
+			rowRefs.current.get(id).close();
+		}
+	};
+
+	const renderRightActions = (event) => {
+		return (
+			<RectButton
+				style={[styles.deleteButton, { backgroundColor: "#FF3B30" }]}
+				onPress={() => {
+					closeRow(event._id);
+					confirmDelete(event);
+				}}
+			>
+				<MaterialCommunityIcons name="delete" size={24} color="white" />
+				<Text style={styles.deleteText}>Delete</Text>
+			</RectButton>
+		);
+	};
+
 	const renderItem = ({ item }) => {
+		console.log("item: ", item);
 		const categoryIcon = getCategoryIcon(item.event_description);
 		const relativeTime = getRelativeTime(item.event_date);
 		const status = getEventStatus(item.event_date);
@@ -101,97 +175,113 @@ export default function EventListScreen() {
 		);
 
 		return (
-			<TouchableOpacity onPress={() => handleEventPress(item)}>
-				<Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
-					<View style={styles.cardHeader}>
-						<MaterialCommunityIcons
-							name={categoryIcon}
-							size={24}
-							color={theme.colors.primary}
-							style={styles.categoryIcon}
-						/>
-						<Chip
-							mode="outlined"
-							style={{ backgroundColor: status.color + "20" }}
-							textStyle={{ color: status.color, fontSize: 12 }}
-						>
-							{status.label}
-						</Chip>
-					</View>
-
-					<Card.Content>
-						<Text style={[styles.title, { color: theme.colors.text }]}>
-							{item.event_name}
-						</Text>
-
-						{item.description ? (
-							<Text
-								numberOfLines={2}
-								style={[
-									styles.description,
-									{ color: theme.colors.textSecondary },
-								]}
+			<Swipeable
+				ref={(ref) => {
+					if (ref) rowRefs.current.set(item._id, ref);
+				}}
+				renderRightActions={() => renderRightActions(item)}
+				renderLeftActions={() => renderRightActions(item)}
+				overshootRight={true}
+				onSwipeableOpen={() => {
+					rowRefs.current.forEach((ref, id) => {
+						if (id !== item._id) ref.close();
+					});
+				}}
+			>
+				<TouchableOpacity onPress={() => handleEventPress(item)}>
+					<Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
+						<View style={styles.cardHeader}>
+							<MaterialCommunityIcons
+								name={categoryIcon}
+								size={24}
+								color={theme.colors.primary}
+								style={styles.categoryIcon}
+							/>
+							<Chip
+								mode="outlined"
+								style={{ backgroundColor: status.color + "20" }}
+								textStyle={{ color: status.color, fontSize: 12 }}
 							>
-								{item.description}
-							</Text>
-						) : null}
-
-						<Divider style={styles.divider} />
-
-						<View style={styles.detailsContainer}>
-							<View style={styles.detailRow}>
-								<MaterialCommunityIcons
-									name="map-marker"
-									size={16}
-									color={theme.colors.primary}
-								/>
-								<Text style={[styles.text, { color: theme.colors.text }]}>
-									{item.location || "No location specified"}
-								</Text>
-							</View>
-
-							<View style={styles.detailRow}>
-								<MaterialCommunityIcons
-									name="clock-outline"
-									size={16}
-									color={theme.colors.primary}
-								/>
-								<Text style={[styles.text, { color: theme.colors.text }]}>
-									{formattedDate}
-								</Text>
-							</View>
-
-							<View style={styles.timeContainer}>
-								<Text
-									style={[
-										styles.relativeTime,
-										{
-											color: status.color,
-											fontWeight: status.label === "Today" ? "bold" : "normal",
-										},
-									]}
-								>
-									{relativeTime}
-								</Text>
-							</View>
+								{status.label}
+							</Chip>
 						</View>
+						<Card.Cover source={{ uri: item.cover_image.presigned_url }} />
 
-						{item.generate_rsvp && (
-							<View style={styles.rsvpContainer}>
-								<Badge size={8} style={{ backgroundColor: "#ff6d00" }} />
+						<Card.Content>
+							<Text style={[styles.title, { color: theme.colors.text }]}>
+								{item.event_name}
+							</Text>
+
+							{item.description ? (
 								<Text
+									numberOfLines={2}
 									style={[
-										styles.rsvpText,
+										styles.description,
 										{ color: theme.colors.textSecondary },
 									]}
 								>
-									RSVP Required
+									{item.description}
 								</Text>
+							) : null}
+
+							<Divider style={styles.divider} />
+
+							<View style={styles.detailsContainer}>
+								<View style={styles.detailRow}>
+									<MaterialCommunityIcons
+										name="map-marker"
+										size={16}
+										color={theme.colors.primary}
+									/>
+									<Text style={[styles.text, { color: theme.colors.text }]}>
+										{item.location || "No location specified"}
+									</Text>
+								</View>
+
+								<View style={styles.detailRow}>
+									<MaterialCommunityIcons
+										name="clock-outline"
+										size={16}
+										color={theme.colors.primary}
+									/>
+									<Text style={[styles.text, { color: theme.colors.text }]}>
+										{formattedDate}
+									</Text>
+								</View>
+
+								<View style={styles.timeContainer}>
+									<Text
+										style={[
+											styles.relativeTime,
+											{
+												color: status.color,
+												fontWeight:
+													status.label === "Today" ? "bold" : "normal",
+											},
+										]}
+									>
+										{relativeTime}
+									</Text>
+								</View>
 							</View>
-						)}
-					</Card.Content>
-				</Card>
-			</TouchableOpacity>
+
+							{item.generate_rsvp && (
+								<View style={styles.rsvpContainer}>
+									<Badge size={8} style={{ backgroundColor: "#ff6d00" }} />
+									<Text
+										style={[
+											styles.rsvpText,
+											{ color: theme.colors.textSecondary },
+										]}
+									>
+										RSVP Link Generated
+									</Text>
+								</View>
+							)}
+						</Card.Content>
+					</Card>
+				</TouchableOpacity>
+			</Swipeable>
 		);
 	};
 
@@ -257,87 +347,105 @@ export default function EventListScreen() {
 		viewMode === "upcoming" ? events.upcomingEvents : events.pastEvents;
 
 	return (
-		<PaperProvider theme={theme}>
-			<View
-				style={[styles.container, { backgroundColor: theme.colors.background }]}
-			>
-				<View style={styles.headerContainer}>
-					<Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-						My Events
-					</Text>
-					<TouchableOpacity
+		<GestureHandlerRootView style={{ flex: 1 }}>
+			<PaperProvider theme={theme}>
+				<View
+					style={[
+						styles.container,
+						{ backgroundColor: theme.colors.background },
+					]}
+				>
+					<View style={styles.headerContainer}>
+						<Text style={[styles.headerTitle, { color: theme.colors.text }]}>
+							My Events
+						</Text>
+						<TouchableOpacity
+							onPress={() => {
+								// Implement search or filter functionality
+							}}
+						>
+							<MaterialCommunityIcons
+								name="magnify"
+								size={24}
+								color={theme.colors.text}
+							/>
+						</TouchableOpacity>
+					</View>
+
+					<TabToggle />
+
+					{loading ? (
+						<View style={styles.loadingContainer}>
+							<ActivityIndicator size="large" color={theme.colors.primary} />
+							<Text
+								style={[
+									styles.loadingText,
+									{ color: theme.colors.textSecondary },
+								]}
+							>
+								Loading events...
+							</Text>
+						</View>
+					) : currentEvents.length === 0 ? (
+						<View style={styles.noEventsContainer}>
+							<MaterialCommunityIcons
+								name={
+									viewMode === "upcoming" ? "calendar-plus" : "calendar-check"
+								}
+								size={64}
+								color={theme.colors.textSecondary}
+							/>
+							<Text
+								style={[styles.noEventsTitle, { color: theme.colors.text }]}
+							>
+								{viewMode === "upcoming"
+									? "No upcoming events"
+									: "No past events"}
+							</Text>
+							<Text
+								style={[
+									styles.noEventsText,
+									{ color: theme.colors.textSecondary },
+								]}
+							>
+								{viewMode === "upcoming"
+									? "Tap the '+' button to add a new event"
+									: "Your past events will appear here"}
+							</Text>
+						</View>
+					) : (
+						<FlatList
+							data={currentEvents}
+							keyExtractor={(item) => item._id}
+							renderItem={renderItem}
+							contentContainerStyle={styles.list}
+							showsVerticalScrollIndicator={false}
+						/>
+					)}
+
+					<FAB
+						style={[styles.fab, { backgroundColor: theme.colors.primary }]}
+						icon="plus"
+						color="white"
 						onPress={() => {
-							// Implement search or filter functionality
-							console.log("Search pressed");
+							router.push("/modal/events/AddEvents");
+						}}
+					/>
+
+					<Snackbar
+						visible={snackbarVisible}
+						onDismiss={() => setSnackbarVisible(false)}
+						duration={3000}
+						action={{
+							label: "OK",
+							onPress: () => setSnackbarVisible(false),
 						}}
 					>
-						<MaterialCommunityIcons
-							name="magnify"
-							size={24}
-							color={theme.colors.text}
-						/>
-					</TouchableOpacity>
+						Event "{deletedEventName}" has been deleted
+					</Snackbar>
 				</View>
-
-				<TabToggle />
-
-				{loading ? (
-					<View style={styles.loadingContainer}>
-						<ActivityIndicator size="large" color={theme.colors.primary} />
-						<Text
-							style={[
-								styles.loadingText,
-								{ color: theme.colors.textSecondary },
-							]}
-						>
-							Loading events...
-						</Text>
-					</View>
-				) : currentEvents.length === 0 ? (
-					<View style={styles.noEventsContainer}>
-						<MaterialCommunityIcons
-							name={
-								viewMode === "upcoming" ? "calendar-plus" : "calendar-check"
-							}
-							size={64}
-							color={theme.colors.textSecondary}
-						/>
-						<Text style={[styles.noEventsTitle, { color: theme.colors.text }]}>
-							{viewMode === "upcoming"
-								? "No upcoming events"
-								: "No past events"}
-						</Text>
-						<Text
-							style={[
-								styles.noEventsText,
-								{ color: theme.colors.textSecondary },
-							]}
-						>
-							{viewMode === "upcoming"
-								? "Tap the '+' button to add a new event"
-								: "Your past events will appear here"}
-						</Text>
-					</View>
-				) : (
-					<FlatList
-						data={currentEvents}
-						keyExtractor={(item) => item._id}
-						renderItem={renderItem}
-						contentContainerStyle={styles.list}
-						showsVerticalScrollIndicator={false}
-					/>
-				)}
-
-				<FAB
-					style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-					icon="plus"
-					color="white"
-					onPress={() => {
-						router.push("/modal/events/AddEvents");
-					}}
-				/>
-			</View>
-		</PaperProvider>
+			</PaperProvider>
+		</GestureHandlerRootView>
 	);
 }
 
@@ -480,5 +588,17 @@ const styles = {
 		position: "absolute",
 		right: 20,
 		bottom: 20,
+	},
+	deleteButton: {
+		justifyContent: "center",
+		alignItems: "center",
+		width: 80,
+		height: "100%",
+		flexDirection: "column",
+	},
+	deleteText: {
+		color: "white",
+		fontSize: 12,
+		marginTop: 4,
 	},
 };

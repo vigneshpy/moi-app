@@ -1,6 +1,7 @@
 import { StyleSheet } from "react-native";
 
 import { View } from "@/components/Themed";
+import React from "react";
 
 export default function Gifts() {
 	return (
