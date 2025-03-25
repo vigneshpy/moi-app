@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { View, StyleSheet, useColorScheme } from "react-native";
 import {
 	Button,
@@ -12,6 +12,7 @@ import { useNavigation } from "@react-navigation/native";
 import { api } from "@/app/api/axios.instance";
 import { useUserStore } from "@/store/useUserStore";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
+import { Picker } from "@react-native-picker/picker";
 
 import * as ImagePicker from "expo-image-picker";
 
@@ -23,9 +24,33 @@ export default function AddEvents() {
 		eventName: "",
 		eventDescription: "",
 		location: "",
+		type: "",
 		eventDate: new Date(),
 		generateRSVP: false,
 	});
+
+	const eventType = [
+		{
+			label: "Wedding",
+			value: "wedding",
+		},
+		{
+			label: "Birthday",
+			value: "birthday",
+		},
+		{
+			label: "Corporate",
+			value: "corporate",
+		},
+		{
+			label: "Get together",
+			value: "get to gether",
+		},
+		{
+			label: "other",
+			value: "other",
+		},
+	];
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
 	const navigation = useNavigation();
@@ -69,6 +94,7 @@ export default function AddEvents() {
 			formData.append("event_name", eventDetails.eventName);
 			formData.append("description", eventDetails.eventDescription);
 			formData.append("location", eventDetails.location);
+			formData.append("type", eventDetails.type);
 			formData.append("event_date", eventDetails.eventDate.toISOString());
 			formData.append("generate_rsvp", String(eventDetails.generateRSVP));
 			formData.append("user_id", user._id);
@@ -135,6 +161,22 @@ export default function AddEvents() {
 				onChangeText={(value) => handleTextChange("eventName", value)}
 				theme={theme}
 			/>
+			<Picker
+				selectedValue={eventDetails.type}
+				onValueChange={(itemValue, itemIndex) =>
+					handleTextChange("type", itemValue)
+				}
+			>
+				{eventType.map((item, index) => {
+					return (
+						<Picker.Item
+							label={item.label}
+							value={item.value}
+							key={`${item.value}_${index}`}
+						/>
+					);
+				})}
+			</Picker>
 
 			<TextInput
 				mode="outlined"
@@ -183,7 +225,7 @@ export default function AddEvents() {
 
 			<View style={styles.switchContainer}>
 				<Text variant="bodyLarge" style={{ color: textColor }}>
-					RSVP Required
+					Generate RSVP Invite Link
 				</Text>
 				<Switch
 					value={eventDetails.generateRSVP}
