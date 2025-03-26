@@ -20,12 +20,20 @@ const EventDetailScreen = () => {
 	const colorScheme = useColorScheme();
 	const theme = colorScheme === "dark" ? darkTheme : lightTheme;
 
+	const [isLoading, setIsLoading] = useState(false);
+	const [error, setError] = useState<string | null>(null);
+
 	const fetchEvent = async () => {
 		try {
+			setIsLoading(true);
+			setError(null);
 			const eventResponse = await api.get(`/events/${eventId}`);
 			setEvent(eventResponse.data || {});
 		} catch (err) {
 			console.error("error fetching the event detail", err);
+			setError("Failed to load event details. Please try again.");
+		} finally {
+			setIsLoading(false);
 		}
 	};
 
