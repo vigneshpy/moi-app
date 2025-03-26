@@ -62,3 +62,13 @@ export const getEventStatus = (dateString: string) => {
 	if (dayDiff <= 3) return { label: "Soon", color: "#ff9800" };
 	return { label: "Upcoming", color: "#2196f3" };
 };
+
+export const formatDate = (date: string) => {
+	return new Date(date).toLocaleDateString(undefined, {
+		weekday: "short",
+		month: "short",
+		day: "numeric",
+		hour: "2-digit",
+		minute: "2-digit",
+	});
+};

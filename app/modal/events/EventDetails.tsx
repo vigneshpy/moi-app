@@ -7,23 +7,40 @@ import {
 	ImageBackground,
 	TouchableOpacity,
 	ScrollView,
+	TextInput,
+	Modal,
 } from "react-native";
-import { Card, Chip } from "react-native-paper";
+import { Card } from "react-native-paper";
 import Ionicons from "react-native-vector-icons/Ionicons";
-import { Share } from "react-native";
 import { api } from "@/app/api/axios.instance";
 import { useLocalSearchParams } from "expo-router";
+import { formatDate } from "@/app/(tabs)/screens/utils";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+import RSVPContainer from "@/components/RSVPContainer";
+import { useEventShare } from "@/components/hooks/useShareEventHook";
 
 const EventDetailScreen = () => {
 	const { eventId } = useLocalSearchParams();
-	const [event, setEvent] = useState({});
+	const [event, setEvent] = useState<Event>();
+	const [rsvp, setRSVP] = useState<RSVP>();
+
+	const eventName = event?.event_name || "Our Event";
+	const eventDescription = event?.description || "";
+	const eventDate = formatDate(event?.event_date || "") || "";
+
+	const location = event?.location || "";
+
+	const rsvpLink = rsvp?.rsvp_link || "";
+	const imageUrl = event?.cover_image?.presigned_url;
+
 	const colorScheme = useColorScheme();
 	const theme = colorScheme === "dark" ? darkTheme : lightTheme;
 
 	const fetchEvent = async () => {
 		try {
-			const eventResponse = await api.get(`/events/${eventId}`);
-			setEvent(eventResponse.data || {});
+			const eventResponse = await api.get(`/events/${eventId}?rsvp=true`);
+			setEvent(eventResponse.data?.event || {});
+			setRSVP(eventResponse.data?.rsvp);
 		} catch (err) {
 			console.error("error fetching the event detail", err);
 		}
@@ -33,130 +50,123 @@ const EventDetailScreen = () => {
 		if (eventId) fetchEvent();
 	}, [eventId]);
 
-	const handleShare = async () => {
-		try {
-			await Share.share({
-				message: `Check out this event: ${event?.event_name} - ${event?.description}`,
-			});
-		} catch (error) {
-			console.error("Error sharing event", error);
-		}
+	const {
+		shareEvent,
+		openShareModal,
+		closeShareModal,
+		modalVisible,
+		caption,
+		setCaption,
+	} = useEventShare();
+
+	const handleShare = () => {
+		shareEvent({
+			eventName,
+			eventDescription,
+			eventDate,
+			location,
+			rsvpLink,
+			imageUrl,
+		});
 	};
 
-	const handleEdit = () => {
-		// navigation.navigate("EditEvent", { event });
-	};
-
-	const renderEventDetails = () => {
+	if (!event) {
 		return (
-			<View style={styles.detailsSection}>
-				<View style={styles.detailRow}>
-					<Ionicons
-						name="calendar-outline"
-						size={20}
-						color={theme.colors.primary}
-					/>
-					<Text style={[styles.text, { color: theme.colors.text }]}>
-						{event?.start_date} - {event?.end_date}
-					</Text>
-				</View>
-				<View style={styles.detailRow}>
-					<Ionicons
-						name="time-outline"
-						size={20}
-						color={theme.colors.primary}
-					/>
-					<Text style={[styles.text, { color: theme.colors.text }]}>
-						{event?.start_time} - {event?.end_time}
-					</Text>
-				</View>
-				<View style={styles.detailRow}>
-					<Ionicons
-						name="location-sharp"
-						size={20}
-						color={theme.colors.primary}
-					/>
-					<Text style={[styles.text, { color: theme.colors.text }]}>
-						{event?.location || "No location specified"}
-					</Text>
-				</View>
-			</View>
-		);
-	};
-
-	const renderEventTags = () => {
-		const tags = event?.tags || [];
-		return (
-			<View style={styles.tagsContainer}>
-				{tags.map((tag, index) => (
-					<Chip key={index} style={styles.chip} textStyle={styles.chipText}>
-						{tag}
-					</Chip>
-				))}
-			</View>
-		);
-	};
-
-	const renderAttendeeSection = () => {
-		return (
-			<View style={styles.attendeeSection}>
-				<Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-					Attendees
+			<View
+				style={[
+					styles.container,
+					{ justifyContent: "center", alignItems: "center" },
+				]}
+			>
+				<Text style={{ color: theme.colors.text }}>
+					Loading event details...
 				</Text>
-				<View style={styles.attendeeIcons}>
-					{event?.attendees?.slice(0, 5).map((attendee, index) => (
-						<View
-							key={index}
-							style={[
-								styles.attendeeIcon,
-								{
-									backgroundColor: theme.colors.primary,
-									zIndex: 5 - index,
-								},
-							]}
-						>
-							<Text style={styles.attendeeInitials}>
-								{attendee.name.charAt(0).toUpperCase()}
-							</Text>
-						</View>
-					))}
-					{event?.attendees?.length > 5 && (
-						<View style={styles.moreAttendeesIcon}>
-							<Text style={styles.moreAttendeesText}>
-								+{event?.attendees.length - 5}
-							</Text>
-						</View>
-					)}
-				</View>
 			</View>
 		);
-	};
+	}
 
 	return (
 		<ScrollView
 			style={[styles.container, { backgroundColor: theme.colors.background }]}
 			contentContainerStyle={styles.scrollViewContent}
 		>
+			<Modal visible={modalVisible} transparent animationType="slide">
+				<View
+					style={{
+						flex: 1,
+						justifyContent: "center",
+						alignItems: "center",
+						backgroundColor: "rgba(0,0,0,0.5)",
+					}}
+				>
+					<View
+						style={{
+							width: 300,
+							padding: 20,
+							backgroundColor: "#fff",
+							borderRadius: 10,
+						}}
+					>
+						<Text style={{ fontSize: 18, fontWeight: "bold" }}>
+							Add Caption before sharing
+						</Text>
+						<TextInput
+							placeholder="Enter your custom caption..."
+							value={caption}
+							onChangeText={setCaption}
+							style={{
+								borderWidth: 1,
+								borderColor: "#ccc",
+								padding: 10,
+								marginVertical: 10,
+								borderRadius: 5,
+							}}
+						/>
+						<View
+							style={{ flexDirection: "row", justifyContent: "space-between" }}
+						>
+							<TouchableOpacity onPress={() => {}} style={{ padding: 10 }}>
+								<Text style={{ color: "red" }}>Cancel</Text>
+							</TouchableOpacity>
+							<TouchableOpacity
+								onPress={openShareModal}
+								style={{ padding: 10 }}
+							>
+								<Text style={{ color: "blue" }}>Share on WhatsApp</Text>
+							</TouchableOpacity>
+						</View>
+					</View>
+				</View>
+			</Modal>
 			<Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
 				<View style={styles.imageContainer}>
 					<ImageBackground
 						source={{ uri: event?.cover_image?.presigned_url }}
 						style={styles.coverImage}
 						resizeMode="cover"
+						imageStyle={styles.imageStyle}
 					>
 						<View style={styles.overlayActions}>
 							<TouchableOpacity
 								style={styles.actionButton}
-								onPress={handleEdit}
+								onPress={() => {
+									/* Edit Event */
+								}}
 							>
 								<Ionicons name="pencil" size={24} color="white" />
 							</TouchableOpacity>
-							<TouchableOpacity
-								style={styles.actionButton}
-								onPress={handleShare}
-							>
-								<Ionicons name="share-social" size={24} color="white" />
-							</TouchableOpacity>
+
+							{rsvp && (
+								<TouchableOpacity
+									style={styles.actionButton}
+									onPress={handleShare}
+								>
+									<Ionicons name="share-social" size={24} color="white" />
+								</TouchableOpacity>
+							)}
+						</View>
+						<View style={styles.eventTypeLabel}>
+							<Text style={styles.eventTypeText}>{event.type || "Event"}</Text>
 						</View>
 					</ImageBackground>
 				</View>
@@ -166,20 +176,52 @@ const EventDetailScreen = () => {
 						{event?.event_name}
 					</Text>
 
-					{event?.description && (
+					{eventDescription && (
 						<Text
 							style={[
 								styles.description,
 								{ color: theme.colors.textSecondary },
 							]}
 						>
-							{event?.description}
+							{eventDescription}
 						</Text>
 					)}
 
-					{renderEventDetails()}
-					{renderEventTags()}
-					{renderAttendeeSection()}
+					<View style={styles.detailsContainer}>
+						<View style={styles.detailRow}>
+							<MaterialCommunityIcons
+								name="map-marker"
+								size={16}
+								color={theme.colors.primary}
+							/>
+							<Text style={[styles.text, { color: theme.colors.text }]}>
+								{location || "No location specified"}
+							</Text>
+						</View>
+
+						<View style={styles.detailRow}>
+							<MaterialCommunityIcons
+								name="clock-outline"
+								size={16}
+								color={theme.colors.primary}
+							/>
+							<Text style={[styles.text, { color: theme.colors.text }]}>
+								{eventDate}
+							</Text>
+						</View>
+
+						<View style={styles.detailRow}>
+							<MaterialCommunityIcons
+								name="mail"
+								size={16}
+								color={theme.colors.primary}
+							/>
+							<Text style={[styles.text, { color: theme.colors.text }]}>
+								Send RSVP
+							</Text>
+						</View>
+					</View>
+					<RSVPContainer rsvp={rsvp} />
 				</Card.Content>
 			</Card>
 		</ScrollView>
@@ -194,6 +236,8 @@ const lightTheme = {
 		text: "#333333",
 		textSecondary: "#666666",
 		border: "#e0e0e0",
+		attending: "rgba(76, 175, 80, 0.1)", // Light green
+		notAttending: "rgba(244, 67, 54, 0.1)", // Light red
 	},
 };
 
@@ -205,10 +249,24 @@ const darkTheme = {
 		text: "#ffffff",
 		textSecondary: "#b0b0b0",
 		border: "#2c2c2c",
+		attending: "rgba(81, 206, 85, 0.2)", // Dark green
+		notAttending: "rgba(185, 69, 60, 0.2)", // Dark red
 	},
 };
 
 const styles = StyleSheet.create({
+	detailsContainer: {
+		marginTop: 4,
+	},
+	detailRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginBottom: 25,
+	},
+	timeContainer: {
+		marginTop: 4,
+		alignSelf: "flex-end",
+	},
 	container: {
 		flex: 1,
 	},
@@ -218,17 +276,23 @@ const styles = StyleSheet.create({
 	},
 	card: {
 		borderRadius: 15,
-		overflow: "hidden",
+		elevation: 4,
+		shadowOpacity: 0.1,
+		shadowRadius: 4,
+		shadowOffset: { width: 0, height: 2 },
 	},
 	imageContainer: {
 		width: "100%",
 		height: 250,
 	},
+	imageStyle: {
+		borderTopLeftRadius: 15,
+		borderTopRightRadius: 15,
+	},
 	coverImage: {
 		flex: 1,
 		width: "100%",
 		height: "100%",
-		alignItems: "flex-end",
 	},
 	overlayActions: {
 		flexDirection: "row",
@@ -245,88 +309,46 @@ const styles = StyleSheet.create({
 		alignItems: "center",
 		marginLeft: 10,
 	},
+	eventTypeLabel: {
+		position: "absolute",
+		bottom: 16,
+		left: 16,
+		backgroundColor: "rgba(0,0,0,0.5)",
+		paddingHorizontal: 12,
+		paddingVertical: 6,
+		borderRadius: 20,
+	},
+	eventTypeText: {
+		color: "white",
+		fontWeight: "bold",
+		textTransform: "uppercase",
+	},
+	text: {
+		fontSize: 14,
+		marginLeft: 8,
+	},
 	cardContent: {
 		paddingTop: 16,
 		paddingBottom: 16,
 	},
 	title: {
-		fontSize: 22,
+		fontSize: 24,
 		fontWeight: "bold",
-		marginBottom: 8,
+		marginBottom: 10,
 		textAlign: "center",
 	},
 	description: {
 		fontSize: 16,
-		marginBottom: 12,
+		marginBottom: 16,
 		textAlign: "center",
+		lineHeight: 22,
 	},
-	detailsSection: {
-		marginTop: 16,
-		alignItems: "center",
-	},
-	detailRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		justifyContent: "center",
-		marginVertical: 4,
-	},
-	text: {
-		marginLeft: 8,
-		fontSize: 16,
-	},
-	tagsContainer: {
-		flexDirection: "row",
-		justifyContent: "center",
-		flexWrap: "wrap",
-		marginTop: 16,
-	},
-	chip: {
-		margin: 4,
-		backgroundColor: "#f0f0f0",
-	},
-	chipText: {
-		fontSize: 12,
-	},
-	attendeeSection: {
-		marginTop: 16,
-		alignItems: "center",
-	},
+
 	sectionTitle: {
 		fontSize: 18,
 		fontWeight: "bold",
-		marginBottom: 8,
-	},
-	attendeeIcons: {
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	attendeeIcon: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
-		marginHorizontal: -10,
-		borderWidth: 2,
-		borderColor: "white",
-	},
-	attendeeInitials: {
-		color: "white",
-		fontWeight: "bold",
-	},
-	moreAttendeesIcon: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "rgba(0,0,0,0.3)",
-		justifyContent: "center",
-		alignItems: "center",
-		marginHorizontal: -10,
-	},
-	moreAttendeesText: {
-		color: "white",
-		fontWeight: "bold",
+		marginBottom: 10,
+		textAlign: "center",
 	},
 });
 

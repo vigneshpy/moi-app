@@ -30,6 +30,7 @@ import {
 	getPastEvents,
 	getRelativeTime,
 	getUpcomingEvents,
+	formatDate,
 } from "./utils";
 import React from "react";
 import Swipeable from "react-native-gesture-handler/Swipeable";
@@ -161,16 +162,6 @@ export default function EventListScreen() {
 		const categoryIcon = getCategoryIcon(item.event_description);
 		const relativeTime = getRelativeTime(item.event_date);
 		const status = getEventStatus(item.event_date);
-		const formattedDate = new Date(item.event_date).toLocaleDateString(
-			undefined,
-			{
-				weekday: "short",
-				month: "short",
-				day: "numeric",
-				hour: "2-digit",
-				minute: "2-digit",
-			}
-		);
 
 		return (
 			<Swipeable
@@ -243,7 +234,7 @@ export default function EventListScreen() {
 										color={theme.colors.primary}
 									/>
 									<Text style={[styles.text, { color: theme.colors.text }]}>
-										{formattedDate}
+										{formatDate(item.event_date)}
 									</Text>
 								</View>
 
