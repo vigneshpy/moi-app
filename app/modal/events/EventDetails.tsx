@@ -141,56 +141,91 @@ const EventDetailScreen = () => {
 	};
 
 	return (
-		<ScrollView
-			style={[styles.container, { backgroundColor: theme.colors.background }]}
-			contentContainerStyle={styles.scrollViewContent}
-		>
-			<Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
-				<View style={styles.imageContainer}>
-					<ImageBackground
-						source={{ uri: event?.cover_image?.presigned_url }}
-						style={styles.coverImage}
-						resizeMode="cover"
-					>
-						<View style={styles.overlayActions}>
-							<TouchableOpacity
-								style={styles.actionButton}
-								onPress={handleEdit}
-							>
-								<Ionicons name="pencil" size={24} color="white" />
-							</TouchableOpacity>
-							<TouchableOpacity
-								style={styles.actionButton}
-								onPress={handleShare}
-							>
-								<Ionicons name="share-social" size={24} color="white" />
-							</TouchableOpacity>
-						</View>
-					</ImageBackground>
-				</View>
+	  <>
+	    {isLoading && (
+	      <View style={styles.loaderContainer}>
+	        <ActivityIndicator size="large" color={theme.colors.primary} />
+	        <Text style={[styles.loaderText, { color: theme.colors.text }]}>
+	          Loading event details...
+	        </Text>
+	      </View>
+	    )}
 
-				<Card.Content style={styles.cardContent}>
-					<Text style={[styles.title, { color: theme.colors.text }]}>
-						{event?.event_name}
-					</Text>
+	    {error && (
+	      <View style={styles.errorContainer}>
+	        <Text style={[styles.errorText, { color: theme.colors.text }]}>
+	          {error}
+	        </Text>
+	        <TouchableOpacity 
+	          style={styles.retryButton} 
+	          onPress={fetchEvent}
+	        >
+	          <Text style={styles.retryButtonText}>Retry</Text>
+	        </TouchableOpacity>
+	      </View>
+	    )}
 
-					{event?.description && (
-						<Text
-							style={[
-								styles.description,
-								{ color: theme.colors.textSecondary },
-							]}
-						>
-							{event?.description}
-						</Text>
-					)}
+	    {!isLoading && !error && Object.keys(event).length === 0 && (
+	      <View style={styles.emptyContainer}>
+	        <Text style={[styles.emptyText, { color: theme.colors.text }]}>
+	          No event details found.
+	        </Text>
+	      </View>
+	    )}
 
-					{renderEventDetails()}
-					{renderEventTags()}
-					{renderAttendeeSection()}
-				</Card.Content>
-			</Card>
-		</ScrollView>
+	    {!isLoading && !error && Object.keys(event).length > 0 && (
+	      <ScrollView
+	        style={[styles.container, { backgroundColor: theme.colors.background }]}
+	        contentContainerStyle={styles.scrollViewContent}
+	      >
+	        <Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
+	          <View style={styles.imageContainer}>
+	            <ImageBackground
+	              source={{ uri: event?.cover_image?.presigned_url }}
+	              style={styles.coverImage}
+	              resizeMode="cover"
+	            >
+	              <View style={styles.overlayActions}>
+	                <TouchableOpacity
+	                  style={styles.actionButton}
+	                  onPress={handleEdit}
+	                >
+	                  <Ionicons name="pencil" size={24} color="white" />
+	                </TouchableOpacity>
+	                <TouchableOpacity
+	                  style={styles.actionButton}
+	                  onPress={handleShare}
+	                >
+	                  <Ionicons name="share-social" size={24} color="white" />
+	                </TouchableOpacity>
+	              </View>
+	            </ImageBackground>
+	          </View>
+
+	          <Card.Content style={styles.cardContent}>
+	            <Text style={[styles.title, { color: theme.colors.text }]}>
+	              {event?.event_name}
+	            </Text>
+
+	            {event?.description && (
+	              <Text
+	                style={[
+	                  styles.description,
+	                  { color: theme.colors.textSecondary },
+	                ]}
+	              >
+	                {event?.description}
+	              </Text>
+	            )}
+
+	            {renderEventDetails()}
+	            {renderEventTags()}
+	            {renderAttendeeSection()}
+	          </Card.Content>
+	        </Card>
+	      </ScrollView>
+	    )}
+	  </>
 	);
 };
 
