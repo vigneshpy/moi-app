@@ -127,6 +127,7 @@ export default function EventListScreen() {
 
 	const handleEventPress = (event) => {
 		router.push({
+			presentation: "modal",
 			pathname: "/modal/events/EventDetails",
 			params: { eventId: event._id },
 		});
@@ -159,7 +160,6 @@ export default function EventListScreen() {
 	};
 
 	const renderItem = ({ item }) => {
-		console.log("item: ", item);
 		const categoryIcon = getCategoryIcon(item.event_description);
 		const relativeTime = getRelativeTime(item.event_date);
 		const status = getEventStatus(item.event_date);
@@ -274,7 +274,7 @@ export default function EventListScreen() {
 											{ color: theme.colors.textSecondary },
 										]}
 									>
-										RSVP Link Generated
+										RSVP
 									</Text>
 								</View>
 							)}
