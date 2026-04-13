@@ -1,0 +1,17 @@
+{
+  "name": "moi-app",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Moi app monorepo (mobile + api)",
+  "scripts": {
+    "dev:api": "pnpm --filter moi-app-api dev",
+    "dev:mobile": "pnpm --filter moi-app start",
+    "build:api": "pnpm --filter moi-app-api watch-ts"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/vigneshpy/moi-app.git"
+  },
+  "license": "ISC",
+  "packageManager": "pnpm@10.32.1"
+}
