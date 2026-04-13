@@ -1,0 +1,66 @@
+{
+  "D:\\projects\\moi-app-api\\serverless.yml": {
+    "versionFramework": "4.11.0",
+    "servicePath": "D:\\projects\\moi-app-api\\serverless.yml",
+    "serviceConfigFileName": "serverless.yml",
+    "service": {
+      "service": "moi-app-api",
+      "frameworkVersion": "3",
+      "provider": {
+        "name": "aws",
+        "runtime": "nodejs18.x",
+        "region": "ap-south-1",
+        "memorySize": 512,
+        "timeout": 10,
+        "stage": "dev"
+      },
+      "functions": {
+        "api": {
+          "handler": "dist/lambda.handler",
+          "events": [
+            {
+              "httpApi": "*"
+            }
+          ]
+        }
+      }
+    },
+    "provider": {
+      "name": "aws",
+      "runtime": "nodejs18.x",
+      "region": "ap-south-1",
+      "memorySize": 512,
+      "timeout": 10,
+      "stage": "dev"
+    },
+    "dashboard": {
+      "isEnabledForService": false,
+      "requiredAuthentication": true,
+      "orgFeaturesInUse": null,
+      "orgObservabilityIntegrations": null,
+      "serviceAppId": null,
+      "serviceProvider": null,
+      "instanceParameters": null
+    },
+    "error": {
+      "message": "The Serverless version (4.11.0) does not satisfy the \"frameworkVersion\" (3) in serverless",
+      "stack": "ServerlessError2: The Serverless version (4.11.0) does not satisfy the \"frameworkVersion\" (3) in serverless\n    at Service.loadServiceFileParam (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:776:9190)\n    at Service.load (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:776:6834)\n    at Serverless.init (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:782:9806)\n    at runFramework (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:809:854)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)\n    at async TraditionalRunner.run (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:805:28308)\n    at async route (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:843:2779)\n    at async Object.run (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:844:3661)\n    at async run2 (file:///C:/Users/vicky/.serverless/releases/4.11.0/package/dist/sf-core.js:844:4814)",
+      "code": "FRAMEWORK_VERSION_MISMATCH"
+    },
+    "serviceRawFile": "service: moi-app-api\r\nframeworkVersion: \"3\"\r\n\r\nprovider:\r\n  name: aws\r\n  runtime: nodejs18.x\r\n  region: ap-south-1\r\n  memorySize: 512\r\n  timeout: 10\r\n\r\nfunctions:\r\n  api:\r\n    handler: dist/lambda.handler\r\n    events:\r\n      - httpApi: \"*\"\r\n",
+    "command": [
+      "package"
+    ],
+    "options": {},
+    "orgId": "944ba1ff-0f82-4a36-b7c5-3378f345d1cd",
+    "orgName": "moiapp",
+    "userId": "gbNZ1ZDkwB1bSqlS5p",
+    "userName": "moiapp",
+    "serviceProviderAwsAccountId": "084828577192",
+    "serviceProviderAwsCfStackId": null,
+    "serviceProviderAwsCfStackCreated": null,
+    "serviceProviderAwsCfStackUpdated": null,
+    "serviceProviderAwsCfStackStatus": null,
+    "serviceProviderAwsCfStackOutputs": null
+  }
+}
