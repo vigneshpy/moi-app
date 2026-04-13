@@ -7,18 +7,22 @@ import {
 	ImageBackground,
 	TouchableOpacity,
 	ScrollView,
+	ActivityIndicator,
 } from "react-native";
 import { Card, Chip } from "react-native-paper";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Share } from "react-native";
 import { api } from "@/app/api/axios.instance";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { MaroonButton } from "@/components/ui/MaroonButton";
 
 const EventDetailScreen = () => {
 	const { eventId } = useLocalSearchParams();
 	const [event, setEvent] = useState({});
 	const colorScheme = useColorScheme();
 	const theme = colorScheme === "dark" ? darkTheme : lightTheme;
+	const { t } = useTranslation();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -221,6 +225,17 @@ const EventDetailScreen = () => {
 	            {renderEventDetails()}
 	            {renderEventTags()}
 	            {renderAttendeeSection()}
+	            <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
+	              <MaroonButton
+	                label={t("events.openLedger")}
+	                onPress={() =>
+	                  router.push({
+	                    pathname: "/modal/events/Ledger",
+	                    params: { eventId: String(eventId) },
+	                  })
+	                }
+	              />
+	            </View>
 	          </Card.Content>
 	        </Card>
 	      </ScrollView>

@@ -1,0 +1,40 @@
+{
+	"app": {
+		"name": "மொய்"
+	},
+	"common": {
+		"save": "சேமி",
+		"cancel": "ரத்து",
+		"delete": "நீக்கு",
+		"edit": "திருத்து",
+		"back": "பின்",
+		"loading": "ஏற்றுகிறது...",
+		"error": "பிழை ஏற்பட்டுள்ளது",
+		"retry": "மீண்டும் முயல்க",
+		"empty": "பதிவுகள் இல்லை"
+	},
+	"language": {
+		"label": "மொழி",
+		"english": "English",
+		"tamil": "தமிழ்"
+	},
+	"ledger": {
+		"title": "பதிவேடு",
+		"totalCollected": "மொத்த வசூல்",
+		"entries": "பதிவுகள்",
+		"people": "பேர்",
+		"addEntry": "+  புதிய மொய்",
+		"namePlaceholder": "விருந்தினர் பெயர்",
+		"partnerPlaceholder": "துணை / குடும்பம் (விருப்பம்)",
+		"amountPlaceholder": "தொகை (₹)",
+		"notePlaceholder": "குறிப்பு (விருப்பம்)",
+		"paymentCash": "ரொக்கம்",
+		"paymentUpi": "UPI",
+		"addTitle": "புதிய மொய் பதிவு",
+		"requiredFields": "பெயரும் தொகையும் அவசியம்",
+		"emptyHint": "\"+ புதிய மொய்\" தட்டவும்"
+	},
+	"events": {
+		"openLedger": "பதிவேடு திற"
+	}
+}

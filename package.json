@@ -1,5 +1,5 @@
 {
-  "name": "moi-app",
+  "name": "moi-monorepo",
   "version": "1.0.0",
   "private": true,
   "description": "Moi app monorepo (mobile + api)",
