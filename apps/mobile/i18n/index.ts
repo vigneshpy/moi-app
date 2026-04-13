@@ -1,6 +1,5 @@
 import i18n from "i18next";
 import { initReactI18next } from "react-i18next";
-import * as Localization from "expo-localization";
 import * as SecureStore from "expo-secure-store";
 import { Platform } from "react-native";
 
@@ -39,8 +38,10 @@ const storage = {
 	},
 };
 
-const deviceLocale = Localization.getLocales()[0]?.languageCode;
-const initial: Language = deviceLocale === "ta" ? "ta" : "en";
+// Default to English; user can flip via the LanguageToggle. We intentionally
+// skip device-locale auto-detect so we don't need the `expo-localization`
+// native module (which would require a new dev-client rebuild).
+const initial: Language = "en";
 
 i18n.use(initReactI18next).init({
 	resources: {

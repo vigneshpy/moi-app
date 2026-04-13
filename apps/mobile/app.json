@@ -31,8 +31,7 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-image-picker",
-      "expo-localization"
+      "expo-image-picker"
     ],
     "experiments": {
       "typedRoutes": true
