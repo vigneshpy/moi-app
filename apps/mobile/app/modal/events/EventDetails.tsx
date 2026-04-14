@@ -1,391 +1,324 @@
 import React, { useEffect, useState } from "react";
 import {
 	View,
-	Text,
 	StyleSheet,
-	useColorScheme,
-	ImageBackground,
-	TouchableOpacity,
+	Image,
 	ScrollView,
+	Pressable,
 	ActivityIndicator,
+	Share,
 } from "react-native";
-import { Card, Chip } from "react-native-paper";
-import Ionicons from "react-native-vector-icons/Ionicons";
-import { Share } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import { getEvent, type EventWithTotals } from "@/db/events";
+
+import { PaperBackground } from "@/components/ui/PaperBackground";
+import { MangoFrame } from "@/components/ui/MangoFrame";
+import { KolamDivider } from "@/components/ui/KolamDivider";
 import { MaroonButton } from "@/components/ui/MaroonButton";
-import { getEvent } from "@/db/events";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AppText } from "@/components/ui/AppText";
+import { colors, radius, spacing } from "@/theme/tokens";
 
-const EventDetailScreen = () => {
-	const { eventId } = useLocalSearchParams();
-	const [event, setEvent] = useState({});
-	const colorScheme = useColorScheme();
-	const theme = colorScheme === "dark" ? darkTheme : lightTheme;
-	const { t } = useTranslation();
+export default function EventDetailScreen() {
+	const { eventId } = useLocalSearchParams<{ eventId: string }>();
+	const { t, i18n } = useTranslation();
 
-	const [isLoading, setIsLoading] = useState(false);
+	const [event, setEvent] = useState<EventWithTotals | null>(null);
+	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 
-	const fetchEvent = async () => {
-		try {
-			setIsLoading(true);
-			setError(null);
-			const row = await getEvent(String(eventId));
-			setEvent(row || {});
-		} catch (err) {
-			console.error("error fetching the event detail", err);
-			setError("Failed to load event details. Please try again.");
-		} finally {
-			setIsLoading(false);
-		}
-	};
-
 	useEffect(() => {
-		if (eventId) fetchEvent();
+		if (!eventId) return;
+		let cancelled = false;
+		(async () => {
+			try {
+				setLoading(true);
+				setError(null);
+				const row = await getEvent(eventId);
+				if (!cancelled) setEvent(row);
+			} catch (e) {
+				if (!cancelled) setError(t("common.error"));
+			} finally {
+				if (!cancelled) setLoading(false);
+			}
+		})();
+		return () => {
+			cancelled = true;
+		};
+		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, [eventId]);
 
 	const handleShare = async () => {
+		if (!event) return;
+		const dateStr = event.event_date
+			? formatDate(event.event_date, i18n.language)
+			: "";
+		const lines = [
+			event.event_name,
+			dateStr && event.location
+				? `${dateStr} · ${event.location}`
+				: dateStr || event.location || "",
+			event.description || "",
+			"",
+			`₹ ${event.total_collected.toLocaleString("en-IN")} collected · ${event.entry_count} entries`,
+		].filter(Boolean);
+
 		try {
-			await Share.share({
-				message: `Check out this event: ${event?.event_name} - ${event?.description}`,
-			});
-		} catch (error) {
-			console.error("Error sharing event", error);
+			await Share.share({ message: lines.join("\n") });
+		} catch {
+			// user cancelled
 		}
 	};
 
-	const handleEdit = () => {
-		// navigation.navigate("EditEvent", { event });
-	};
-
-	const renderEventDetails = () => {
+	if (loading) {
 		return (
-			<View style={styles.detailsSection}>
-				<View style={styles.detailRow}>
-					<Ionicons
-						name="calendar-outline"
-						size={20}
-						color={theme.colors.primary}
-					/>
-					<Text style={[styles.text, { color: theme.colors.text }]}>
-						{event?.start_date} - {event?.end_date}
-					</Text>
+			<PaperBackground>
+				<View style={styles.center}>
+					<ActivityIndicator color={colors.maroon} />
 				</View>
-				<View style={styles.detailRow}>
-					<Ionicons
-						name="time-outline"
-						size={20}
-						color={theme.colors.primary}
-					/>
-					<Text style={[styles.text, { color: theme.colors.text }]}>
-						{event?.start_time} - {event?.end_time}
-					</Text>
-				</View>
-				<View style={styles.detailRow}>
-					<Ionicons
-						name="location-sharp"
-						size={20}
-						color={theme.colors.primary}
-					/>
-					<Text style={[styles.text, { color: theme.colors.text }]}>
-						{event?.location || "No location specified"}
-					</Text>
-				</View>
-			</View>
+			</PaperBackground>
 		);
-	};
+	}
 
-	const renderEventTags = () => {
-		const tags = event?.tags || [];
+	if (error || !event) {
 		return (
-			<View style={styles.tagsContainer}>
-				{tags.map((tag, index) => (
-					<Chip key={index} style={styles.chip} textStyle={styles.chipText}>
-						{tag}
-					</Chip>
-				))}
-			</View>
-		);
-	};
-
-	const renderAttendeeSection = () => {
-		return (
-			<View style={styles.attendeeSection}>
-				<Text style={[styles.sectionTitle, { color: theme.colors.text }]}>
-					Attendees
-				</Text>
-				<View style={styles.attendeeIcons}>
-					{event?.attendees?.slice(0, 5).map((attendee, index) => (
-						<View
-							key={index}
-							style={[
-								styles.attendeeIcon,
-								{
-									backgroundColor: theme.colors.primary,
-									zIndex: 5 - index,
-								},
-							]}
-						>
-							<Text style={styles.attendeeInitials}>
-								{attendee.name.charAt(0).toUpperCase()}
-							</Text>
-						</View>
-					))}
-					{event?.attendees?.length > 5 && (
-						<View style={styles.moreAttendeesIcon}>
-							<Text style={styles.moreAttendeesText}>
-								+{event?.attendees.length - 5}
-							</Text>
-						</View>
-					)}
+			<PaperBackground>
+				<View style={styles.center}>
+					<AppText color={colors.danger}>{error || t("common.error")}</AppText>
+					<MaroonButton
+						label={t("common.retry")}
+						variant="outline"
+						onPress={() => {
+							setLoading(true);
+							getEvent(eventId!).then(setEvent).finally(() => setLoading(false));
+						}}
+						style={{ marginTop: spacing.md }}
+					/>
 				</View>
-			</View>
+			</PaperBackground>
 		);
-	};
+	}
 
 	return (
-	  <>
-	    {isLoading && (
-	      <View style={styles.loaderContainer}>
-	        <ActivityIndicator size="large" color={theme.colors.primary} />
-	        <Text style={[styles.loaderText, { color: theme.colors.text }]}>
-	          Loading event details...
-	        </Text>
-	      </View>
-	    )}
+		<PaperBackground>
+			<ScrollView contentContainerStyle={styles.scroll}>
+				<View style={styles.topBar}>
+					<Pressable onPress={() => router.back()} hitSlop={12}>
+						<AppText color={colors.maroon} weight="bold">
+							← {t("common.back")}
+						</AppText>
+					</Pressable>
+					<View style={styles.topActions}>
+						<Pressable onPress={handleShare} hitSlop={10} style={styles.iconBtn}>
+							<MaterialCommunityIcons
+								name="share-variant-outline"
+								size={22}
+								color={colors.maroon}
+							/>
+						</Pressable>
+						<LanguageToggle />
+					</View>
+				</View>
 
-	    {error && (
-	      <View style={styles.errorContainer}>
-	        <Text style={[styles.errorText, { color: theme.colors.text }]}>
-	          {error}
-	        </Text>
-	        <TouchableOpacity 
-	          style={styles.retryButton} 
-	          onPress={fetchEvent}
-	        >
-	          <Text style={styles.retryButtonText}>Retry</Text>
-	        </TouchableOpacity>
-	      </View>
-	    )}
+				{/* Cover image or fallback */}
+				{event.cover_uri ? (
+					<Image
+						source={{ uri: event.cover_uri }}
+						style={styles.cover}
+						resizeMode="cover"
+					/>
+				) : (
+					<View style={[styles.cover, styles.coverFallback]}>
+						<MaterialCommunityIcons
+							name="heart-multiple"
+							size={64}
+							color={colors.gold}
+						/>
+					</View>
+				)}
 
-	    {!isLoading && !error && Object.keys(event).length === 0 && (
-	      <View style={styles.emptyContainer}>
-	        <Text style={[styles.emptyText, { color: theme.colors.text }]}>
-	          No event details found.
-	        </Text>
-	      </View>
-	    )}
+				<MangoFrame style={styles.card}>
+					<AppText
+						variant="h2"
+						weight="bold"
+						color={colors.maroon}
+						align="center"
+					>
+						{event.event_name}
+					</AppText>
 
-	    {!isLoading && !error && Object.keys(event).length > 0 && (
-	      <ScrollView
-	        style={[styles.container, { backgroundColor: theme.colors.background }]}
-	        contentContainerStyle={styles.scrollViewContent}
-	      >
-	        <Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
-	          <View style={styles.imageContainer}>
-	            <ImageBackground
-	              source={event?.cover_uri ? { uri: event.cover_uri } : undefined}
-	              style={styles.coverImage}
-	              resizeMode="cover"
-	            >
-	              <View style={styles.overlayActions}>
-	                <TouchableOpacity
-	                  style={styles.actionButton}
-	                  onPress={handleEdit}
-	                >
-	                  <Ionicons name="pencil" size={24} color="white" />
-	                </TouchableOpacity>
-	                <TouchableOpacity
-	                  style={styles.actionButton}
-	                  onPress={handleShare}
-	                >
-	                  <Ionicons name="share-social" size={24} color="white" />
-	                </TouchableOpacity>
-	              </View>
-	            </ImageBackground>
-	          </View>
+					{event.description ? (
+						<AppText
+							color={colors.inkSoft}
+							align="center"
+							style={{ marginTop: spacing.xs }}
+						>
+							{event.description}
+						</AppText>
+					) : null}
 
-	          <Card.Content style={styles.cardContent}>
-	            <Text style={[styles.title, { color: theme.colors.text }]}>
-	              {event?.event_name}
-	            </Text>
+					<KolamDivider compact />
 
-	            {event?.description && (
-	              <Text
-	                style={[
-	                  styles.description,
-	                  { color: theme.colors.textSecondary },
-	                ]}
-	              >
-	                {event?.description}
-	              </Text>
-	            )}
+					{/* Details rows */}
+					<View style={styles.detailsSection}>
+						{event.event_date ? (
+							<DetailRow
+								icon="calendar-month-outline"
+								text={formatDate(event.event_date, i18n.language)}
+							/>
+						) : null}
+						{event.location ? (
+							<DetailRow icon="map-marker-outline" text={event.location} />
+						) : null}
+						{event.event_type ? (
+							<DetailRow icon="tag-outline" text={capitalize(event.event_type)} />
+						) : null}
+					</View>
 
-	            {renderEventDetails()}
-	            {renderEventTags()}
-	            {renderAttendeeSection()}
-	            <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
-	              <MaroonButton
-	                label={t("events.openLedger")}
-	                onPress={() =>
-	                  router.push({
-	                    pathname: "/modal/events/Ledger",
-	                    params: { eventId: String(eventId) },
-	                  })
-	                }
-	              />
-	            </View>
-	          </Card.Content>
-	        </Card>
-	      </ScrollView>
-	    )}
-	  </>
+					<KolamDivider compact />
+
+					{/* Stats */}
+					<View style={styles.statsRow}>
+						<View style={styles.statTile}>
+							<AppText
+								variant="label"
+								color={colors.goldLight}
+								align="center"
+							>
+								{t("ledger.totalCollected").toUpperCase()}
+							</AppText>
+							<AppText
+								variant="h1"
+								weight="bold"
+								color={colors.gold}
+								align="center"
+								style={{ marginTop: 4 }}
+							>
+								₹ {event.total_collected.toLocaleString("en-IN")}
+							</AppText>
+							<AppText
+								variant="small"
+								color={colors.goldLight}
+								align="center"
+								style={{ marginTop: 2 }}
+							>
+								{event.entry_count}{" "}
+								{i18n.language === "ta"
+									? t("ledger.people")
+									: t("ledger.entries")}
+							</AppText>
+						</View>
+					</View>
+				</MangoFrame>
+
+				<View style={styles.actions}>
+					<MaroonButton
+						label={t("events.openLedger")}
+						onPress={() =>
+							router.push({
+								pathname: "/modal/events/Ledger",
+								params: { eventId: String(eventId) },
+							})
+						}
+					/>
+				</View>
+			</ScrollView>
+		</PaperBackground>
 	);
-};
+}
 
-const lightTheme = {
-	colors: {
-		primary: "#6200ee",
-		background: "#f8f9fa",
-		card: "#ffffff",
-		text: "#333333",
-		textSecondary: "#666666",
-		border: "#e0e0e0",
-	},
-};
+function DetailRow({ icon, text }: { icon: string; text: string }) {
+	return (
+		<View style={styles.detailRow}>
+			<MaterialCommunityIcons
+				name={icon as any}
+				size={18}
+				color={colors.gold}
+			/>
+			<AppText color={colors.ink} style={{ marginLeft: spacing.sm }}>
+				{text}
+			</AppText>
+		</View>
+	);
+}
 
-const darkTheme = {
-	colors: {
-		primary: "#bb86fc",
-		background: "#121212",
-		card: "#1e1e1e",
-		text: "#ffffff",
-		textSecondary: "#b0b0b0",
-		border: "#2c2c2c",
-	},
-};
+function formatDate(iso: string, lang: string): string {
+	try {
+		return new Date(iso).toLocaleDateString(
+			lang === "ta" ? "ta-IN" : "en-IN",
+			{ weekday: "short", day: "numeric", month: "long", year: "numeric" },
+		);
+	} catch {
+		return iso;
+	}
+}
+
+function capitalize(s: string): string {
+	return s.charAt(0).toUpperCase() + s.slice(1);
+}
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
+	scroll: {
+		padding: spacing.lg,
+		paddingBottom: spacing.xxxl,
 	},
-	scrollViewContent: {
-		padding: 16,
-		paddingBottom: 32,
+	topBar: {
+		flexDirection: "row",
+		justifyContent: "space-between",
+		alignItems: "center",
+		marginBottom: spacing.md,
+	},
+	topActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+	},
+	iconBtn: {
+		padding: spacing.xs,
+	},
+	center: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	cover: {
+		width: "100%",
+		height: 200,
+		borderRadius: radius.lg,
+		overflow: "hidden",
+		marginBottom: spacing.lg,
+	},
+	coverFallback: {
+		alignItems: "center",
+		justifyContent: "center",
+		backgroundColor: colors.ivoryDeep,
 	},
 	card: {
-		borderRadius: 15,
-		overflow: "hidden",
-	},
-	imageContainer: {
-		width: "100%",
-		height: 250,
-	},
-	coverImage: {
-		flex: 1,
-		width: "100%",
-		height: "100%",
-		alignItems: "flex-end",
-	},
-	overlayActions: {
-		flexDirection: "row",
-		position: "absolute",
-		top: 16,
-		right: 16,
-	},
-	actionButton: {
-		backgroundColor: "rgba(0,0,0,0.5)",
-		borderRadius: 20,
-		width: 40,
-		height: 40,
-		justifyContent: "center",
-		alignItems: "center",
-		marginLeft: 10,
-	},
-	cardContent: {
-		paddingTop: 16,
-		paddingBottom: 16,
-	},
-	title: {
-		fontSize: 22,
-		fontWeight: "bold",
-		marginBottom: 8,
-		textAlign: "center",
-	},
-	description: {
-		fontSize: 16,
-		marginBottom: 12,
-		textAlign: "center",
+		marginHorizontal: spacing.xs,
 	},
 	detailsSection: {
-		marginTop: 16,
-		alignItems: "center",
+		gap: spacing.sm,
 	},
 	detailRow: {
 		flexDirection: "row",
 		alignItems: "center",
-		justifyContent: "center",
-		marginVertical: 4,
 	},
-	text: {
-		marginLeft: 8,
-		fontSize: 16,
-	},
-	tagsContainer: {
-		flexDirection: "row",
-		justifyContent: "center",
-		flexWrap: "wrap",
-		marginTop: 16,
-	},
-	chip: {
-		margin: 4,
-		backgroundColor: "#f0f0f0",
-	},
-	chipText: {
-		fontSize: 12,
-	},
-	attendeeSection: {
-		marginTop: 16,
+	statsRow: {
 		alignItems: "center",
 	},
-	sectionTitle: {
-		fontSize: 18,
-		fontWeight: "bold",
-		marginBottom: 8,
+	statTile: {
+		backgroundColor: colors.maroon,
+		borderRadius: radius.lg,
+		paddingVertical: spacing.lg,
+		paddingHorizontal: spacing.xl,
+		minWidth: 240,
+		borderWidth: 1,
+		borderColor: colors.goldDeep,
 	},
-	attendeeIcons: {
-		flexDirection: "row",
-		justifyContent: "center",
-		alignItems: "center",
-	},
-	attendeeIcon: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		justifyContent: "center",
-		alignItems: "center",
-		marginHorizontal: -10,
-		borderWidth: 2,
-		borderColor: "white",
-	},
-	attendeeInitials: {
-		color: "white",
-		fontWeight: "bold",
-	},
-	moreAttendeesIcon: {
-		width: 40,
-		height: 40,
-		borderRadius: 20,
-		backgroundColor: "rgba(0,0,0,0.3)",
-		justifyContent: "center",
-		alignItems: "center",
-		marginHorizontal: -10,
-	},
-	moreAttendeesText: {
-		color: "white",
-		fontWeight: "bold",
+	actions: {
+		marginTop: spacing.xl,
 	},
 });
-
-export default EventDetailScreen;

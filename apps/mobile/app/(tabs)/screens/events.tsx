@@ -8,7 +8,7 @@ import {
 	Alert,
 	ActivityIndicator,
 } from "react-native";
-import { router, useFocusEffect } from "expo-router";
+import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import {
@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useEventsStore } from "@/store/eventsStore";
 import type { EventWithTotals } from "@/db/events";
-import { getUpcomingEvents, getPastEvents } from "./utils";
+import { getUpcomingEvents, getPastEvents } from "@/lib/event-utils";
 
 import { PaperBackground } from "@/components/ui/PaperBackground";
 import { MaroonButton } from "@/components/ui/MaroonButton";
@@ -39,13 +39,10 @@ export default function EventListScreen() {
 	const [bucket, setBucket] = useState<Bucket>("upcoming");
 	const rowRefs = useRef(new Map<string, Swipeable>());
 
-	// Re-load whenever the screen comes into focus — cheap and keeps totals
-	// fresh after returning from the ledger.
-	useFocusEffect(
-		React.useCallback(() => {
-			refresh();
-		}, [refresh]),
-	);
+	useEffect(() => {
+		refresh();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const { upcoming, past } = useMemo(() => {
 		// utils expect rows with event_date

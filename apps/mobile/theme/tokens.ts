@@ -63,11 +63,14 @@ export const typography = {
 } as const;
 
 /** Pick heading font by language */
-export function headingFont(lang: "en" | "ta"): string {
+export function headingFont(lang: "en" | "ta"): string | undefined {
+	// Cormorant Garamond for English headings; Anek Tamil Bold for Tamil.
 	return lang === "ta" ? fonts.tamilBold : fonts.serifBold;
 }
 
 /** Pick body font by language */
 export function bodyFont(lang: "en" | "ta"): string | undefined {
-	return lang === "ta" ? fonts.tamil : fonts.serif;
+	// English body: system font (clean, native-looking on mobile).
+	// Tamil body: Anek Tamil (custom, needed for proper rendering).
+	return lang === "ta" ? fonts.tamil : undefined;
 }
