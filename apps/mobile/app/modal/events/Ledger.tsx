@@ -26,12 +26,14 @@ import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { AppText } from "@/components/ui/AppText";
 import { colors, radius, spacing } from "@/theme/tokens";
 
+const EMPTY_GIFTS: import("@/db/gifts").GiftRow[] = [];
+
 export default function LedgerScreen() {
 	const { eventId } = useLocalSearchParams<{ eventId: string }>();
 	const { t, i18n } = useTranslation();
 
 	const gifts = useGiftsStore((s) =>
-		eventId ? s.byEvent[eventId] ?? [] : [],
+		eventId ? s.byEvent[eventId] ?? EMPTY_GIFTS : EMPTY_GIFTS,
 	);
 	const loadFor = useGiftsStore((s) => s.loadFor);
 
