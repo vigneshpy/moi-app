@@ -61,7 +61,10 @@ export default function LedgerScreen() {
 		} finally {
 			setLoading(false);
 		}
-	}, [eventId, t, loadFor]);
+	// eslint-disable-next-line react-hooks/exhaustive-deps -- `t` intentionally
+	// excluded: it produces a new ref every render and is only used for the
+	// error string, not for the data-fetching logic.
+	}, [eventId, loadFor]);
 
 	useEffect(() => {
 		load();
