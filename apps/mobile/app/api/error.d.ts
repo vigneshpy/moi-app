@@ -1,3 +1,0 @@
-interface APIError {
-	error: string;
-}

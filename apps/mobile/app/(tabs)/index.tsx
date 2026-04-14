@@ -1,32 +1,246 @@
-import { StyleSheet } from "react-native";
+import React, { useEffect, useMemo } from "react";
+import { View, StyleSheet, ScrollView, Pressable } from "react-native";
+import { useFocusEffect, router } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
-import { View } from "@/components/Themed";
+import { useEventsStore } from "@/store/eventsStore";
+import { PaperBackground } from "@/components/ui/PaperBackground";
+import { MangoFrame } from "@/components/ui/MangoFrame";
+import { KolamDivider } from "@/components/ui/KolamDivider";
+import { MaroonButton } from "@/components/ui/MaroonButton";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AppText } from "@/components/ui/AppText";
+import { colors, radius, spacing } from "@/theme/tokens";
 
-export default function TabOneScreen() {
+export default function HomeScreen() {
+	const { t, i18n } = useTranslation();
+	const events = useEventsStore((s) => s.events);
+	const refresh = useEventsStore((s) => s.refresh);
+
+	useFocusEffect(
+		React.useCallback(() => {
+			refresh();
+		}, [refresh]),
+	);
+
+	const { grandTotal, totalEntries, upcoming } = useMemo(() => {
+		const now = Date.now();
+		let total = 0;
+		let count = 0;
+		for (const e of events) {
+			total += e.total_collected;
+			count += e.entry_count;
+		}
+		const upc = events
+			.filter((e) => e.event_date && new Date(e.event_date).getTime() >= now)
+			.sort(
+				(a, b) =>
+					new Date(a.event_date!).getTime() - new Date(b.event_date!).getTime(),
+			)
+			.slice(0, 3);
+		return { grandTotal: total, totalEntries: count, upcoming: upc };
+	}, [events]);
+
+	const hasNoEvents = events.length === 0;
+
 	return (
-		<View style={styles.container}>
-			<View
-				style={styles.separator}
-				lightColor="#eee"
-				darkColor="rgba(255,255,255,0.1)"
-			/>
+		<PaperBackground>
+			<ScrollView contentContainerStyle={styles.scroll}>
+				<View style={styles.topBar}>
+					<View>
+						<AppText
+							variant="label"
+							color={colors.inkSoft}
+							style={{ letterSpacing: 1 }}
+						>
+							வணக்கம்
+						</AppText>
+						<AppText variant="h2" weight="bold" color={colors.maroon}>
+							{t("app.name")}
+						</AppText>
+					</View>
+					<LanguageToggle />
+				</View>
+
+				<MangoFrame style={styles.summary}>
+					<AppText
+						variant="label"
+						color={colors.inkSoft}
+						align="center"
+					>
+						{t("ledger.totalCollected").toUpperCase()}
+					</AppText>
+					<AppText
+						variant="h1"
+						weight="bold"
+						color={colors.maroon}
+						align="center"
+						style={{ marginTop: 4 }}
+					>
+						₹ {grandTotal.toLocaleString("en-IN")}
+					</AppText>
+					<KolamDivider compact />
+					<View style={styles.metricsRow}>
+						<Metric
+							label={t("ledger.entries")}
+							value={String(totalEntries)}
+						/>
+						<View style={styles.verticalRule} />
+						<Metric
+							label={t("events.title")}
+							value={String(events.length)}
+						/>
+					</View>
+				</MangoFrame>
+
+				<View style={{ marginTop: spacing.xl }}>
+					<AppText
+						variant="h3"
+						weight="bold"
+						color={colors.maroon}
+						style={{ marginBottom: spacing.md }}
+					>
+						{t("events.upcoming")}
+					</AppText>
+
+					{hasNoEvents ? (
+						<View style={styles.emptyBox}>
+							<MaterialCommunityIcons
+								name="notebook-outline"
+								size={48}
+								color={colors.gold}
+							/>
+							<AppText
+								color={colors.inkMuted}
+								align="center"
+								style={{
+									marginTop: spacing.sm,
+									paddingHorizontal: spacing.md,
+								}}
+							>
+								{t("events.emptyHint")}
+							</AppText>
+						</View>
+					) : upcoming.length === 0 ? (
+						<AppText color={colors.inkMuted}>
+							{t("common.empty")}
+						</AppText>
+					) : (
+						upcoming.map((e) => (
+							<Pressable
+								key={e.id}
+								style={styles.upcomingRow}
+								onPress={() =>
+									router.push({
+										pathname: "/modal/events/Ledger",
+										params: { eventId: e.id },
+									})
+								}
+							>
+								<View style={{ flex: 1 }}>
+									<AppText
+										weight="bold"
+										color={colors.ink}
+										numberOfLines={1}
+									>
+										{e.event_name}
+									</AppText>
+									<AppText variant="small" color={colors.inkMuted}>
+										{e.event_date
+											? new Date(e.event_date).toLocaleDateString(
+													i18n.language === "ta" ? "ta-IN" : "en-IN",
+													{ day: "numeric", month: "short" },
+											  )
+											: ""}
+										{e.location ? `  ·  ${e.location}` : ""}
+									</AppText>
+								</View>
+								<AppText
+									variant="numeric"
+									weight="bold"
+									color={colors.gold}
+								>
+									₹ {e.total_collected.toLocaleString("en-IN")}
+								</AppText>
+							</Pressable>
+						))
+					)}
+				</View>
+
+				<View style={{ marginTop: spacing.xl }}>
+					<MaroonButton
+						label={
+							hasNoEvents
+								? t("events.addFirst")
+								: t("events.addAnother")
+						}
+						onPress={() => router.push("/modal/events/AddEvents")}
+					/>
+				</View>
+			</ScrollView>
+		</PaperBackground>
+	);
+}
+
+function Metric({ label, value }: { label: string; value: string }) {
+	return (
+		<View style={{ flex: 1, alignItems: "center" }}>
+			<AppText
+				variant="h3"
+				weight="bold"
+				color={colors.maroon}
+			>
+				{value}
+			</AppText>
+			<AppText variant="small" color={colors.inkMuted}>
+				{label}
+			</AppText>
 		</View>
 	);
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
+	scroll: {
+		padding: spacing.lg,
+		paddingBottom: spacing.xxxl,
+	},
+	topBar: {
+		flexDirection: "row",
+		justifyContent: "space-between",
 		alignItems: "center",
-		justifyContent: "center",
+		marginTop: spacing.xl,
+		marginBottom: spacing.lg,
 	},
-	title: {
-		fontSize: 20,
-		fontWeight: "bold",
+	summary: {
+		marginHorizontal: spacing.xs,
 	},
-	separator: {
-		marginVertical: 30,
-		height: 1,
-		width: "80%",
+	metricsRow: {
+		flexDirection: "row",
+		alignItems: "center",
+	},
+	verticalRule: {
+		width: 1,
+		height: 32,
+		backgroundColor: colors.divider,
+	},
+	emptyBox: {
+		alignItems: "center",
+		paddingVertical: spacing.xl,
+		borderWidth: 1.5,
+		borderStyle: "dashed",
+		borderColor: colors.divider,
+		borderRadius: radius.lg,
+	},
+	upcomingRow: {
+		flexDirection: "row",
+		alignItems: "center",
+		paddingVertical: spacing.md,
+		paddingHorizontal: spacing.md,
+		backgroundColor: colors.cream,
+		borderRadius: radius.md,
+		borderWidth: 1,
+		borderColor: colors.divider,
+		marginBottom: spacing.sm,
 	},
 });

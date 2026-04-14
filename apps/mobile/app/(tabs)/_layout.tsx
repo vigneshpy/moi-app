@@ -1,56 +1,65 @@
 import React from "react";
-import FontAwesome from "@expo/vector-icons/FontAwesome";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { Tabs } from "expo-router";
 
-import Colors from "@/constants/Colors";
-import { useColorScheme } from "@/components/useColorScheme";
-import { useClientOnlyValue } from "@/components/useClientOnlyValue";
+import { colors } from "@/theme/tokens";
 
-// You can explore the built-in icon families and icons on the web at https://icons.expo.fyi/
-function TabBarIcon(props: {
-	name: React.ComponentProps<typeof FontAwesome>["name"];
+function TabIcon({
+	name,
+	color,
+}: {
+	name: React.ComponentProps<typeof MaterialCommunityIcons>["name"];
 	color: string;
 }) {
-	return <FontAwesome size={28} style={{ marginBottom: -3 }} {...props} />;
+	return <MaterialCommunityIcons size={26} name={name} color={color} />;
 }
-export default function TabLayout() {
-	const colorScheme = useColorScheme();
 
+export default function TabLayout() {
 	return (
 		<Tabs
 			screenOptions={{
-				tabBarActiveTintColor: Colors[colorScheme ?? "light"].tint,
-				headerShown: useClientOnlyValue(false, true),
+				tabBarActiveTintColor: colors.maroon,
+				tabBarInactiveTintColor: colors.inkMuted,
+				tabBarStyle: {
+					backgroundColor: colors.cream,
+					borderTopColor: colors.gold,
+					borderTopWidth: 1,
+				},
+				tabBarLabelStyle: { fontSize: 11 },
+				headerShown: false,
 			}}
 		>
 			<Tabs.Screen
 				name="index"
 				options={{
 					title: "Home",
-					tabBarIcon: ({ color }) => <TabBarIcon name="home" color={color} />,
+					tabBarIcon: ({ color }) => (
+						<TabIcon name="home-variant-outline" color={color} />
+					),
 				}}
 			/>
 			<Tabs.Screen
 				name="screens/events"
 				options={{
-					title: "Events",
+					title: "Functions",
 					tabBarIcon: ({ color }) => (
-						<TabBarIcon name="calendar" color={color} />
+						<TabIcon name="notebook-outline" color={color} />
+					),
+				}}
+			/>
+			<Tabs.Screen
+				name="screens/profile"
+				options={{
+					title: "Settings",
+					tabBarIcon: ({ color }) => (
+						<TabIcon name="cog-outline" color={color} />
 					),
 				}}
 			/>
 			<Tabs.Screen
 				name="screens/gifts"
 				options={{
-					title: "Gifts",
-					tabBarIcon: ({ color }) => <TabBarIcon name="money" color={color} />,
-				}}
-			/>
-			<Tabs.Screen
-				name="screens/profile"
-				options={{
-					title: "Profile",
-					tabBarIcon: ({ color }) => <TabBarIcon name="user" color={color} />,
+					href: null, // hide old stub; route gone from nav
 				}}
 			/>
 		</Tabs>

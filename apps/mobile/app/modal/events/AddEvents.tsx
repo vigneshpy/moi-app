@@ -1,279 +1,330 @@
-import { useRef, useState } from "react";
-import { View, StyleSheet, useColorScheme } from "react-native";
+import React, { useState } from "react";
 import {
-	Button,
-	Text,
-	Switch,
+	View,
+	StyleSheet,
+	ScrollView,
 	TextInput,
-	MD3DarkTheme,
-	MD3LightTheme,
-} from "react-native-paper";
+	Pressable,
+	Image,
+	KeyboardAvoidingView,
+	Platform,
+	Alert,
+} from "react-native";
 import { useNavigation } from "@react-navigation/native";
-import { api } from "@/app/api/axios.instance";
-import { useUserStore } from "@/store/useUserStore";
-import DateTimePickerModal from "react-native-modal-datetime-picker";
-import { Picker } from "@react-native-picker/picker";
-
+import { useTranslation } from "react-i18next";
 import * as ImagePicker from "expo-image-picker";
+import DateTimePickerModal from "react-native-modal-datetime-picker";
 
-import React from "react";
+import { useEventsStore } from "@/store/eventsStore";
+import { saveCover } from "@/db/media";
+import type { EventType } from "@/db/events";
+
+import { PaperBackground } from "@/components/ui/PaperBackground";
+import { MangoFrame } from "@/components/ui/MangoFrame";
+import { KolamDivider } from "@/components/ui/KolamDivider";
+import { MaroonButton } from "@/components/ui/MaroonButton";
+import { AppText } from "@/components/ui/AppText";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { colors, radius, spacing } from "@/theme/tokens";
+
+type TypeOption = { value: EventType; labelKey: string };
+
+const TYPE_OPTIONS: TypeOption[] = [
+	{ value: "wedding", labelKey: "addEvent.types.wedding" },
+	{ value: "birthday", labelKey: "addEvent.types.birthday" },
+	{ value: "corporate", labelKey: "addEvent.types.corporate" },
+	{ value: "other", labelKey: "addEvent.types.other" },
+];
+
 export default function AddEvents() {
+	const { t, i18n } = useTranslation();
+	const navigation = useNavigation();
+	const addEventToStore = useEventsStore((s) => s.add);
+
+	const [eventName, setEventName] = useState("");
+	const [eventType, setEventType] = useState<EventType>("wedding");
+	const [eventDescription, setEventDescription] = useState("");
+	const [location, setLocation] = useState("");
+	const [eventDate, setEventDate] = useState<Date>(new Date());
 	const [image, setImage] = useState<string | null>(null);
 
-	const [eventDetails, setEventDetails] = useState({
-		eventName: "",
-		eventDescription: "",
-		location: "",
-		type: "",
-		eventDate: new Date(),
-		generateRSVP: false,
-	});
-
-	const eventType = [
-		{
-			label: "Wedding",
-			value: "wedding",
-		},
-		{
-			label: "Birthday",
-			value: "birthday",
-		},
-		{
-			label: "Corporate",
-			value: "corporate",
-		},
-		{
-			label: "Get together",
-			value: "get to gether",
-		},
-		{
-			label: "other",
-			value: "other",
-		},
-	];
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
-
-	const navigation = useNavigation();
-	const { user }: any = useUserStore();
-
-	const colorScheme = useColorScheme();
-	const theme = colorScheme === "dark" ? MD3DarkTheme : MD3LightTheme;
-
-	const backgroundColor = colorScheme === "dark" ? "#121212" : "#FFFFFF";
-	const textColor = colorScheme === "dark" ? "#FFFFFF" : "#000000";
-
-	const handleTextChange = (field: string, value: string | boolean | Date) => {
-		setEventDetails({
-			...eventDetails,
-			[field]: value,
-		});
-	};
+	const [saving, setSaving] = useState(false);
+	const [err, setErr] = useState<string | null>(null);
 
 	const pickImage = async () => {
 		const { status } = await ImagePicker.requestMediaLibraryPermissionsAsync();
 		if (status !== "granted") {
-			alert("Permission denied!");
+			Alert.alert(t("addEvent.permissionDenied"));
 			return;
 		}
-
 		const result = await ImagePicker.launchImageLibraryAsync({
 			mediaTypes: ImagePicker.MediaTypeOptions.Images,
 			allowsEditing: true,
 			quality: 0.8,
 		});
-		if (!result.canceled) {
-			setImage(result.assets[0].uri);
-		}
+		if (!result.canceled) setImage(result.assets[0].uri);
 	};
 
-	const addEvent = async () => {
+	const handleSave = async () => {
+		if (!eventName.trim()) {
+			setErr(t("addEvent.nameRequired"));
+			return;
+		}
 		try {
-			const formData = new FormData();
-
-			// Append event details
-			formData.append("event_name", eventDetails.eventName);
-			formData.append("description", eventDetails.eventDescription);
-			formData.append("location", eventDetails.location);
-			formData.append("type", eventDetails.type);
-			formData.append("event_date", eventDetails.eventDate.toISOString());
-			formData.append("generate_rsvp", String(eventDetails.generateRSVP));
-			formData.append("user_id", user._id);
-
-			// Append cover image if selected
-			if (image) {
-				formData.append("cover_image", {
-					uri: image,
-					name: `cover_${Date.now()}.jpg`,
-					type: "image/jpeg",
-				} as any);
-			}
-
-			await api.post("/events/create", formData, {
-				headers: { "Content-Type": "multipart/form-data" },
+			setSaving(true);
+			setErr(null);
+			const coverUri = image ? await saveCover(image) : null;
+			await addEventToStore({
+				event_name: eventName.trim(),
+				event_type: eventType,
+				event_date: eventDate.toISOString(),
+				location: location.trim() || null,
+				description: eventDescription.trim() || null,
+				cover_uri: coverUri,
 			});
-
 			navigation.goBack();
-		} catch (error: any) {
-			console.error("Error adding event:", error?.message);
+		} catch (e: any) {
+			console.error("add event failed", e);
+			setErr(e?.message || t("common.error"));
+		} finally {
+			setSaving(false);
 		}
 	};
 
-	const showDatePicker = () => {
-		setDatePickerVisibility(true);
-	};
-
-	const hideDatePicker = () => {
-		setDatePickerVisibility(false);
-	};
-
-	const handleDateConfirm = (date: Date) => {
-		setEventDetails({
-			...eventDetails,
-			["eventDate"]: date,
-		});
-		hideDatePicker();
-	};
-
-	const formatDateTime = () => {
-		return `${eventDetails.eventDate?.toDateString()} at ${eventDetails.eventDate.toLocaleTimeString(
-			[],
-			{
-				hour: "2-digit",
-				minute: "2-digit",
-			}
-		)}`;
-	};
+	const formatDate = () =>
+		eventDate.toLocaleDateString(i18n.language === "ta" ? "ta-IN" : "en-IN", {
+			day: "numeric",
+			month: "short",
+			year: "numeric",
+		}) +
+		" · " +
+		eventDate.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 
 	return (
-		<View style={[styles.container, { backgroundColor }]}>
-			<Text
-				variant="headlineMedium"
-				style={[styles.title, { color: textColor }]}
+		<PaperBackground>
+			<KeyboardAvoidingView
+				style={{ flex: 1 }}
+				behavior={Platform.OS === "ios" ? "padding" : undefined}
 			>
-				Add Event
-			</Text>
+				<ScrollView contentContainerStyle={styles.scroll}>
+					<View style={styles.topBar}>
+						<Pressable onPress={() => navigation.goBack()} hitSlop={12}>
+							<AppText color={colors.maroon} weight="bold">
+								← {t("common.cancel")}
+							</AppText>
+						</Pressable>
+						<LanguageToggle />
+					</View>
 
-			<TextInput
-				mode="outlined"
-				label="Event Name"
-				style={styles.input}
-				value={eventDetails.eventName}
-				onChangeText={(value) => handleTextChange("eventName", value)}
-				theme={theme}
-			/>
-			<Picker
-				selectedValue={eventDetails.type}
-				onValueChange={(itemValue, itemIndex) =>
-					handleTextChange("type", itemValue)
-				}
-			>
-				{eventType.map((item, index) => {
-					return (
-						<Picker.Item
-							label={item.label}
-							value={item.value}
-							key={`${item.value}_${index}`}
+					<MangoFrame style={styles.card}>
+						<AppText
+							variant="h2"
+							weight="bold"
+							color={colors.maroon}
+							align="center"
+						>
+							{t("addEvent.title")}
+						</AppText>
+						<KolamDivider compact />
+
+						<Label>{t("addEvent.fieldName")}</Label>
+						<Input
+							value={eventName}
+							onChangeText={setEventName}
+							placeholder={t("addEvent.namePlaceholder")}
 						/>
-					);
-				})}
-			</Picker>
 
-			<TextInput
-				mode="outlined"
-				label="Description"
-				style={styles.input}
-				multiline
-				numberOfLines={3}
-				value={eventDetails.eventDescription}
-				onChangeText={(value) => handleTextChange("eventDescription", value)}
-				theme={theme}
-			/>
+						<Label>{t("addEvent.fieldType")}</Label>
+						<View style={styles.typeRow}>
+							{TYPE_OPTIONS.map((opt) => (
+								<TypeChip
+									key={opt.value}
+									active={eventType === opt.value}
+									label={t(opt.labelKey)}
+									onPress={() => setEventType(opt.value)}
+								/>
+							))}
+						</View>
 
-			<TextInput
-				mode="outlined"
-				label="Location"
-				style={styles.input}
-				value={eventDetails.location}
-				onChangeText={(value) => handleTextChange("location", value)}
-				theme={theme}
-			/>
+						<Label>{t("addEvent.fieldDate")}</Label>
+						<Pressable
+							onPress={() => setDatePickerVisibility(true)}
+							style={styles.dateButton}
+						>
+							<AppText color={colors.ink}>{formatDate()}</AppText>
+						</Pressable>
 
-			<Text
-				variant="bodyLarge"
-				style={[styles.dateLabel, { color: textColor }]}
-			>
-				Event Date & Time
-			</Text>
+						<Label>{t("addEvent.fieldLocation")}</Label>
+						<Input
+							value={location}
+							onChangeText={setLocation}
+							placeholder={t("addEvent.locationPlaceholder")}
+						/>
 
-			<Button
-				mode="outlined"
-				onPress={showDatePicker}
-				style={styles.dateButton}
-				theme={theme}
-			>
-				{formatDateTime()}
-			</Button>
+						<Label>{t("addEvent.fieldDescription")}</Label>
+						<Input
+							value={eventDescription}
+							onChangeText={setEventDescription}
+							placeholder={t("addEvent.descriptionPlaceholder")}
+							multiline
+							numberOfLines={3}
+							style={{ minHeight: 70, textAlignVertical: "top" }}
+						/>
+
+						<Label>{t("addEvent.fieldCover")}</Label>
+						<Pressable onPress={pickImage} style={styles.coverPicker}>
+							{image ? (
+								<Image source={{ uri: image }} style={styles.coverPreview} />
+							) : (
+								<View style={styles.coverPlaceholder}>
+									<AppText color={colors.inkMuted}>
+										🖼  {t("addEvent.pickCover")}
+									</AppText>
+								</View>
+							)}
+						</Pressable>
+
+						{err && (
+							<AppText
+								variant="small"
+								color={colors.danger}
+								align="center"
+								style={{ marginTop: spacing.md }}
+							>
+								{err}
+							</AppText>
+						)}
+					</MangoFrame>
+
+					<View style={{ marginTop: spacing.xl }}>
+						<MaroonButton
+							label={t("addEvent.save")}
+							onPress={handleSave}
+							loading={saving}
+						/>
+					</View>
+				</ScrollView>
+			</KeyboardAvoidingView>
 
 			<DateTimePickerModal
 				isVisible={isDatePickerVisible}
 				mode="datetime"
-				onConfirm={handleDateConfirm}
-				onCancel={hideDatePicker}
+				onConfirm={(d) => {
+					setEventDate(d);
+					setDatePickerVisibility(false);
+				}}
+				onCancel={() => setDatePickerVisibility(false)}
 			/>
+		</PaperBackground>
+	);
+}
 
-			<Button onPress={pickImage}>Pick a Cover Image</Button>
+function Label({ children }: { children: React.ReactNode }) {
+	return (
+		<AppText
+			variant="label"
+			color={colors.inkSoft}
+			style={{ marginTop: spacing.lg, marginBottom: spacing.xs }}
+		>
+			{String(children).toUpperCase()}
+		</AppText>
+	);
+}
 
-			<View style={styles.switchContainer}>
-				<Text variant="bodyLarge" style={{ color: textColor }}>
-					Generate RSVP Invite Link
-				</Text>
-				<Switch
-					value={eventDetails.generateRSVP}
-					onValueChange={(text: any) => handleTextChange("generateRSVP", text)}
-					theme={theme}
-				/>
-			</View>
+function Input(props: React.ComponentProps<typeof TextInput>) {
+	return (
+		<TextInput
+			{...props}
+			placeholderTextColor={colors.inkMuted}
+			style={[styles.input, props.style]}
+		/>
+	);
+}
 
-			<Button
-				mode="contained"
-				onPress={addEvent}
-				style={styles.button}
-				theme={theme}
+function TypeChip({
+	active,
+	label,
+	onPress,
+}: {
+	active: boolean;
+	label: string;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			onPress={onPress}
+			style={[styles.chip, active && styles.chipActive]}
+		>
+			<AppText
+				color={active ? colors.gold : colors.maroon}
+				weight={active ? "bold" : "regular"}
+				style={{ fontSize: 13 }}
 			>
-				Add Event
-			</Button>
-		</View>
+				{label}
+			</AppText>
+		</Pressable>
 	);
 }
 
 const styles = StyleSheet.create({
-	container: {
-		flex: 1,
-		padding: 20,
-		justifyContent: "center",
+	scroll: {
+		padding: spacing.lg,
+		paddingBottom: spacing.xxxl,
 	},
-	title: {
-		marginBottom: 20,
-		fontWeight: "bold",
-		alignSelf: "center",
-	},
-	input: {
-		marginBottom: 16,
-	},
-	dateLabel: {
-		marginBottom: 8,
-	},
-	dateButton: {
-		marginBottom: 16,
-	},
-	button: {
-		marginTop: 16,
-		paddingVertical: 6,
-	},
-	switchContainer: {
+	topBar: {
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		marginVertical: 16,
+		marginBottom: spacing.lg,
+	},
+	card: {
+		marginHorizontal: spacing.xs,
+	},
+	input: {
+		borderBottomWidth: 1,
+		borderColor: colors.divider,
+		paddingVertical: spacing.md,
+		fontSize: 16,
+		color: colors.ink,
+	},
+	dateButton: {
+		borderWidth: 1,
+		borderColor: colors.divider,
+		borderRadius: radius.md,
+		paddingVertical: spacing.md,
+		paddingHorizontal: spacing.md,
+	},
+	typeRow: {
+		flexDirection: "row",
+		flexWrap: "wrap",
+		gap: spacing.sm,
+	},
+	chip: {
+		paddingVertical: spacing.sm,
+		paddingHorizontal: spacing.md,
+		borderRadius: radius.pill,
+		borderWidth: 1.5,
+		borderColor: colors.maroon,
+	},
+	chipActive: {
+		backgroundColor: colors.maroon,
+	},
+	coverPicker: {
+		borderWidth: 1.5,
+		borderColor: colors.divider,
+		borderStyle: "dashed",
+		borderRadius: radius.md,
+		height: 140,
+		overflow: "hidden",
+	},
+	coverPlaceholder: {
+		flex: 1,
+		alignItems: "center",
+		justifyContent: "center",
+	},
+	coverPreview: {
+		width: "100%",
+		height: "100%",
 	},
 });

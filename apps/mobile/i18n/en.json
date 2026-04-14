@@ -1,0 +1,78 @@
+{
+	"app": {
+		"name": "Moi"
+	},
+	"common": {
+		"save": "Save",
+		"cancel": "Cancel",
+		"delete": "Delete",
+		"edit": "Edit",
+		"back": "Back",
+		"loading": "Loading...",
+		"error": "Something went wrong",
+		"retry": "Retry",
+		"empty": "No entries yet"
+	},
+	"language": {
+		"label": "Language",
+		"english": "English",
+		"tamil": "தமிழ்"
+	},
+	"ledger": {
+		"title": "Ledger",
+		"totalCollected": "Total collected",
+		"entries": "entries",
+		"people": "people",
+		"addEntry": "+  New moi",
+		"namePlaceholder": "Guest name",
+		"partnerPlaceholder": "Partner / family (optional)",
+		"amountPlaceholder": "Amount (₹)",
+		"notePlaceholder": "Note (optional)",
+		"paymentCash": "Cash",
+		"paymentUpi": "UPI",
+		"addTitle": "New moi entry",
+		"requiredFields": "Name and amount are required",
+		"emptyHint": "Tap \"+ New moi\" to record your first entry"
+	},
+	"events": {
+		"title": "Functions",
+		"openLedger": "Open ledger",
+		"emptyTitle": "No functions yet",
+		"emptyHint": "Tap + to add a wedding, birthday, or any function you want to track moi for.",
+		"addFirst": "+ Add your first function",
+		"addAnother": "+ Add function",
+		"upcoming": "Upcoming",
+		"past": "Past"
+	},
+	"addEvent": {
+		"title": "New function",
+		"fieldName": "Function name",
+		"namePlaceholder": "e.g. Ravi & Divya's wedding",
+		"fieldType": "Type",
+		"fieldDate": "Date & time",
+		"fieldLocation": "Location",
+		"locationPlaceholder": "Venue / city",
+		"fieldDescription": "Notes",
+		"descriptionPlaceholder": "Anything to remember (optional)",
+		"fieldCover": "Cover photo",
+		"pickCover": "Pick a cover photo",
+		"save": "Save function",
+		"nameRequired": "Function name is required",
+		"permissionDenied": "Gallery access was denied",
+		"types": {
+			"wedding": "Wedding",
+			"birthday": "Birthday",
+			"corporate": "Corporate",
+			"other": "Other"
+		}
+	},
+	"settings": {
+		"title": "Settings",
+		"language": "Language",
+		"clearData": "Clear all data",
+		"clearConfirm": "Delete every function and moi entry? This cannot be undone.",
+		"clearConfirmYes": "Delete everything",
+		"about": "About",
+		"aboutBody": "Moi — a local notebook for tracking wedding & function gifts. All data stays on your device."
+	}
+}

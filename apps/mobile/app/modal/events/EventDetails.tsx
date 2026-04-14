@@ -7,18 +7,22 @@ import {
 	ImageBackground,
 	TouchableOpacity,
 	ScrollView,
+	ActivityIndicator,
 } from "react-native";
 import { Card, Chip } from "react-native-paper";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Share } from "react-native";
-import { api } from "@/app/api/axios.instance";
-import { useLocalSearchParams } from "expo-router";
+import { useLocalSearchParams, router } from "expo-router";
+import { useTranslation } from "react-i18next";
+import { MaroonButton } from "@/components/ui/MaroonButton";
+import { getEvent } from "@/db/events";
 
 const EventDetailScreen = () => {
 	const { eventId } = useLocalSearchParams();
 	const [event, setEvent] = useState({});
 	const colorScheme = useColorScheme();
 	const theme = colorScheme === "dark" ? darkTheme : lightTheme;
+	const { t } = useTranslation();
 
 	const [isLoading, setIsLoading] = useState(false);
 	const [error, setError] = useState<string | null>(null);
@@ -27,8 +31,8 @@ const EventDetailScreen = () => {
 		try {
 			setIsLoading(true);
 			setError(null);
-			const eventResponse = await api.get(`/events/${eventId}`);
-			setEvent(eventResponse.data || {});
+			const row = await getEvent(String(eventId));
+			setEvent(row || {});
 		} catch (err) {
 			console.error("error fetching the event detail", err);
 			setError("Failed to load event details. Please try again.");
@@ -181,7 +185,7 @@ const EventDetailScreen = () => {
 	        <Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
 	          <View style={styles.imageContainer}>
 	            <ImageBackground
-	              source={{ uri: event?.cover_image?.presigned_url }}
+	              source={event?.cover_uri ? { uri: event.cover_uri } : undefined}
 	              style={styles.coverImage}
 	              resizeMode="cover"
 	            >
@@ -221,6 +225,17 @@ const EventDetailScreen = () => {
 	            {renderEventDetails()}
 	            {renderEventTags()}
 	            {renderAttendeeSection()}
+	            <View style={{ marginTop: 20, paddingHorizontal: 16 }}>
+	              <MaroonButton
+	                label={t("events.openLedger")}
+	                onPress={() =>
+	                  router.push({
+	                    pathname: "/modal/events/Ledger",
+	                    params: { eventId: String(eventId) },
+	                  })
+	                }
+	              />
+	            </View>
 	          </Card.Content>
 	        </Card>
 	      </ScrollView>
