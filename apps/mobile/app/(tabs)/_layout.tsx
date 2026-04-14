@@ -56,12 +56,8 @@ export default function TabLayout() {
 					),
 				}}
 			/>
-			<Tabs.Screen
-				name="screens/gifts"
-				options={{
-					href: null, // hide old stub; route gone from nav
-				}}
-			/>
+			{/* Hide non-screen files that expo-router picks up */}
+			<Tabs.Screen name="screens/gifts" options={{ href: null }} />
 		</Tabs>
 	);
 }

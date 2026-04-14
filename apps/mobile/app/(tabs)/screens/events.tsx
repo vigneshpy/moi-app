@@ -19,7 +19,7 @@ import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { useEventsStore } from "@/store/eventsStore";
 import type { EventWithTotals } from "@/db/events";
-import { getUpcomingEvents, getPastEvents } from "./utils";
+import { getUpcomingEvents, getPastEvents } from "@/lib/event-utils";
 
 import { PaperBackground } from "@/components/ui/PaperBackground";
 import { MaroonButton } from "@/components/ui/MaroonButton";
