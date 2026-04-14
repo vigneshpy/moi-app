@@ -9,8 +9,8 @@ import {
 	MD3LightTheme,
 } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { api } from "@/app/api/axios.instance";
-import { useUserStore } from "@/store/useUserStore";
+import { useEventsStore } from "@/store/eventsStore";
+import { saveCover } from "@/db/media";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 import { Picker } from "@react-native-picker/picker";
 
@@ -54,7 +54,7 @@ export default function AddEvents() {
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
 
 	const navigation = useNavigation();
-	const { user }: any = useUserStore();
+	const addEventToStore = useEventsStore((s) => s.add);
 
 	const colorScheme = useColorScheme();
 	const theme = colorScheme === "dark" ? MD3DarkTheme : MD3LightTheme;
@@ -88,28 +88,16 @@ export default function AddEvents() {
 
 	const addEvent = async () => {
 		try {
-			const formData = new FormData();
+			// Persist the picked cover so the URI is stable after the picker closes.
+			const coverUri = image ? await saveCover(image) : null;
 
-			// Append event details
-			formData.append("event_name", eventDetails.eventName);
-			formData.append("description", eventDetails.eventDescription);
-			formData.append("location", eventDetails.location);
-			formData.append("type", eventDetails.type);
-			formData.append("event_date", eventDetails.eventDate.toISOString());
-			formData.append("generate_rsvp", String(eventDetails.generateRSVP));
-			formData.append("user_id", user._id);
-
-			// Append cover image if selected
-			if (image) {
-				formData.append("cover_image", {
-					uri: image,
-					name: `cover_${Date.now()}.jpg`,
-					type: "image/jpeg",
-				} as any);
-			}
-
-			await api.post("/events/create", formData, {
-				headers: { "Content-Type": "multipart/form-data" },
+			await addEventToStore({
+				event_name: eventDetails.eventName,
+				event_type: (eventDetails.type || "wedding") as any,
+				event_date: eventDetails.eventDate.toISOString(),
+				location: eventDetails.location || null,
+				description: eventDetails.eventDescription || null,
+				cover_uri: coverUri,
 			});
 
 			navigation.goBack();

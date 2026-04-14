@@ -14,8 +14,9 @@ import {
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 
-import { api } from "@/app/api/axios.instance";
-import { useUserStore } from "@/store/useUserStore";
+import { getEvent, type EventWithTotals } from "@/db/events";
+import { useGiftsStore } from "@/store/giftsStore";
+import type { GiftRow as DbGiftRow, PaymentMethod } from "@/db/gifts";
 
 import { PaperBackground } from "@/components/ui/PaperBackground";
 import { MangoFrame } from "@/components/ui/MangoFrame";
@@ -25,31 +26,16 @@ import { LanguageToggle } from "@/components/ui/LanguageToggle";
 import { AppText } from "@/components/ui/AppText";
 import { colors, radius, spacing } from "@/theme/tokens";
 
-type Gift = {
-	_id: string;
-	recipient_name: string;
-	partner_name?: string;
-	amount: number;
-	payment_method: "Cash" | "UPI";
-	description?: string;
-	gift_date?: string;
-};
-
-type EventInfo = {
-	_id: string;
-	event_name: string;
-	event_date?: string;
-	location?: string;
-	cover_image?: { presigned_url?: string };
-};
-
 export default function LedgerScreen() {
 	const { eventId } = useLocalSearchParams<{ eventId: string }>();
 	const { t, i18n } = useTranslation();
-	const user = useUserStore((s) => s.user);
 
-	const [event, setEvent] = useState<EventInfo | null>(null);
-	const [gifts, setGifts] = useState<Gift[]>([]);
+	const gifts = useGiftsStore((s) =>
+		eventId ? s.byEvent[eventId] ?? [] : [],
+	);
+	const loadFor = useGiftsStore((s) => s.loadFor);
+
+	const [event, setEvent] = useState<EventWithTotals | null>(null);
 	const [loading, setLoading] = useState(true);
 	const [error, setError] = useState<string | null>(null);
 	const [showAdd, setShowAdd] = useState(false);
@@ -64,35 +50,26 @@ export default function LedgerScreen() {
 		try {
 			setLoading(true);
 			setError(null);
-			const [eventRes, giftsRes] = await Promise.all([
-				api.get(`/events/${eventId}`),
-				api.get(`/gifts/event/${eventId}`),
+			const [e] = await Promise.all([
+				getEvent(eventId),
+				loadFor(eventId),
 			]);
-			setEvent(eventRes.data);
-			setGifts(Array.isArray(giftsRes.data) ? giftsRes.data : []);
+			setEvent(e);
 		} catch (e) {
 			console.error("ledger load failed", e);
 			setError(t("common.error"));
 		} finally {
 			setLoading(false);
 		}
-	}, [eventId, t]);
+	}, [eventId, t, loadFor]);
 
 	useEffect(() => {
 		load();
 	}, [load]);
 
-	const onAdded = (gift: Gift) => {
-		setGifts((prev) => [gift, ...prev]);
-		setShowAdd(false);
-	};
-
 	return (
 		<PaperBackground>
-			<ScrollView
-				contentContainerStyle={styles.scroll}
-				stickyHeaderIndices={[]}
-			>
+			<ScrollView contentContainerStyle={styles.scroll}>
 				<View style={styles.topBar}>
 					<Pressable onPress={() => router.back()} hitSlop={12}>
 						<AppText color={colors.maroon} weight="bold">
@@ -198,9 +175,9 @@ export default function LedgerScreen() {
 							<FlatList
 								data={gifts}
 								scrollEnabled={false}
-								keyExtractor={(g) => g._id}
+								keyExtractor={(g) => g.id}
 								ItemSeparatorComponent={() => <View style={styles.sep} />}
-								renderItem={({ item }) => <GiftRow gift={item} />}
+								renderItem={({ item }) => <GiftItemRow gift={item} />}
 							/>
 						)}
 					</>
@@ -217,16 +194,13 @@ export default function LedgerScreen() {
 			<AddEntryModal
 				visible={showAdd}
 				eventId={eventId || ""}
-				userId={user?._id || ""}
-				eventLocation={event?.location || ""}
 				onClose={() => setShowAdd(false)}
-				onAdded={onAdded}
 			/>
 		</PaperBackground>
 	);
 }
 
-function GiftRow({ gift }: { gift: Gift }) {
+function GiftItemRow({ gift }: { gift: DbGiftRow }) {
 	return (
 		<View style={styles.row}>
 			<View style={{ flex: 1 }}>
@@ -234,13 +208,13 @@ function GiftRow({ gift }: { gift: Gift }) {
 					{gift.recipient_name}
 					{gift.partner_name ? ` & ${gift.partner_name}` : ""}
 				</AppText>
-				{!!gift.description && (
+				{!!gift.note && (
 					<AppText
 						variant="small"
 						color={colors.inkMuted}
 						style={{ marginTop: 2 }}
 					>
-						{gift.description}
+						{gift.note}
 					</AppText>
 				)}
 			</View>
@@ -264,24 +238,20 @@ function GiftRow({ gift }: { gift: Gift }) {
 function AddEntryModal({
 	visible,
 	eventId,
-	userId,
-	eventLocation,
 	onClose,
-	onAdded,
 }: {
 	visible: boolean;
 	eventId: string;
-	userId: string;
-	eventLocation: string;
 	onClose: () => void;
-	onAdded: (g: Gift) => void;
 }) {
 	const { t } = useTranslation();
+	const addGift = useGiftsStore((s) => s.add);
+
 	const [name, setName] = useState("");
 	const [partner, setPartner] = useState("");
 	const [amount, setAmount] = useState("");
 	const [note, setNote] = useState("");
-	const [method, setMethod] = useState<"Cash" | "UPI">("Cash");
+	const [method, setMethod] = useState<PaymentMethod>("Cash");
 	const [saving, setSaving] = useState(false);
 	const [err, setErr] = useState<string | null>(null);
 
@@ -303,21 +273,19 @@ function AddEntryModal({
 		try {
 			setSaving(true);
 			setErr(null);
-			const res = await api.post("/gifts/create", {
-				user_id: userId,
+			await addGift({
 				event_id: eventId,
 				recipient_name: name.trim(),
-				partner_name: partner.trim() || undefined,
+				partner_name: partner.trim() || null,
 				amount: amt,
 				payment_method: method,
-				location: eventLocation || "—",
-				description: note.trim() || name.trim(),
+				note: note.trim() || null,
 			});
-			onAdded(res.data as Gift);
 			reset();
+			onClose();
 		} catch (e: any) {
 			console.error("add gift failed", e);
-			setErr(e?.response?.data?.error || t("common.error"));
+			setErr(e?.message || t("common.error"));
 		} finally {
 			setSaving(false);
 		}

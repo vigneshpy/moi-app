@@ -12,10 +12,10 @@ import {
 import { Card, Chip } from "react-native-paper";
 import Ionicons from "react-native-vector-icons/Ionicons";
 import { Share } from "react-native";
-import { api } from "@/app/api/axios.instance";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { MaroonButton } from "@/components/ui/MaroonButton";
+import { getEvent } from "@/db/events";
 
 const EventDetailScreen = () => {
 	const { eventId } = useLocalSearchParams();
@@ -31,8 +31,8 @@ const EventDetailScreen = () => {
 		try {
 			setIsLoading(true);
 			setError(null);
-			const eventResponse = await api.get(`/events/${eventId}`);
-			setEvent(eventResponse.data || {});
+			const row = await getEvent(String(eventId));
+			setEvent(row || {});
 		} catch (err) {
 			console.error("error fetching the event detail", err);
 			setError("Failed to load event details. Please try again.");
@@ -185,7 +185,7 @@ const EventDetailScreen = () => {
 	        <Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
 	          <View style={styles.imageContainer}>
 	            <ImageBackground
-	              source={{ uri: event?.cover_image?.presigned_url }}
+	              source={event?.cover_uri ? { uri: event.cover_uri } : undefined}
 	              style={styles.coverImage}
 	              resizeMode="cover"
 	            >

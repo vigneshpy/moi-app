@@ -19,11 +19,9 @@ import {
 	Snackbar,
 } from "react-native-paper";
 import { useNavigation } from "@react-navigation/native";
-import { api } from "@/app/api/axios.instance";
-import { useUserStore } from "@/store/useUserStore";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 import { router } from "expo-router";
-import { useResourceStore } from "@/store/resourceStore";
+import { useEventsStore } from "@/store/eventsStore";
 import {
 	getCategoryIcon,
 	getEventStatus,
@@ -39,22 +37,26 @@ import {
 } from "react-native-gesture-handler";
 
 export default function EventListScreen() {
-	const { events: eventsFromStore = [], setEvents: setEventInStore } =
-		useResourceStore((state) => state);
+	const storeEvents = useEventsStore((s) => s.events);
+	const refresh = useEventsStore((s) => s.refresh);
+	const remove = useEventsStore((s) => s.remove);
+	const storeLoading = useEventsStore((s) => s.loading);
+
+	// Expose both `id` and `_id` so downstream code using `_id` still works.
+	const allEvents = storeEvents.map((e) => ({ ...e, _id: e.id }));
 
 	const [events, setEvents] = useState({
-		upcomingEvents: getUpcomingEvents(eventsFromStore),
-		pastEvents: getPastEvents(eventsFromStore),
+		upcomingEvents: getUpcomingEvents(allEvents),
+		pastEvents: getPastEvents(allEvents),
 	});
 
-	const [loading, setLoading] = useState(true);
+	const [loading, setLoading] = useState(storeLoading);
 	const [viewMode, setViewMode] = useState("upcoming");
 	const [snackbarVisible, setSnackbarVisible] = useState(false);
 	const [deletedEventName, setDeletedEventName] = useState("");
 	const rowRefs = useRef(new Map());
 
 	const colorScheme = useColorScheme();
-	const { user } = useUserStore();
 	const navigation = useNavigation();
 
 	const theme = {
@@ -63,35 +65,29 @@ export default function EventListScreen() {
 		colors: colorScheme === "dark" ? darkColors : lightColors,
 	};
 
+	// Re-derive upcoming/past buckets whenever the store changes.
+	useEffect(() => {
+		setEvents({
+			upcomingEvents: getUpcomingEvents(allEvents),
+			pastEvents: getPastEvents(allEvents),
+		});
+		setLoading(storeLoading);
+	}, [storeEvents, storeLoading]);
+
 	const fetchEvents = async () => {
-		const userID = user?._id;
-		if (userID) {
-			try {
-				setLoading(true);
-				const response = await api.get(`/events/user/${userID}`);
-				const allEvents = response.data;
-				setEventInStore(allEvents);
-				setEvents({
-					upcomingEvents: getUpcomingEvents(allEvents),
-					pastEvents: getPastEvents(allEvents),
-				});
-			} catch (error) {
-				console.error("Error fetching events:", error);
-			} finally {
-				setLoading(false);
-			}
-		} else {
+		setLoading(true);
+		try {
+			await refresh();
+		} catch (error) {
+			console.error("Error fetching events:", error);
+		} finally {
 			setLoading(false);
 		}
 	};
 
 	const deleteEvent = async (eventId, eventName) => {
 		try {
-			await api.delete(`/events/${eventId}`);
-			const allEvents = [
-				...(events.pastEvents || []),
-				...(events.upcomingEvents || []),
-			];
+			await remove(eventId);
 			const updatedEvents = allEvents.filter((event) => event._id !== eventId);
 			const updatedAllEvents = {
 				upcomingEvents: getUpcomingEvents(updatedEvents),
@@ -99,8 +95,6 @@ export default function EventListScreen() {
 			};
 
 			setEvents(updatedAllEvents);
-
-			setEventInStore(updatedEvents);
 
 			setDeletedEventName(eventName);
 			setSnackbarVisible(true);
@@ -205,7 +199,9 @@ export default function EventListScreen() {
 								{status.label}
 							</Chip>
 						</View>
-						<Card.Cover source={{ uri: item.cover_image.presigned_url }} />
+						{item.cover_uri && (
+							<Card.Cover source={{ uri: item.cover_uri }} />
+						)}
 
 						<Card.Content>
 							<Text style={[styles.title, { color: theme.colors.text }]}>
