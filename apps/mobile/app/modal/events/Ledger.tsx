@@ -10,13 +10,16 @@ import {
 	Platform,
 	ActivityIndicator,
 	ScrollView,
+	Alert,
 } from "react-native";
 import { useLocalSearchParams, router } from "expo-router";
 import { useTranslation } from "react-i18next";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
 
 import { getEvent, type EventWithTotals } from "@/db/events";
 import { useGiftsStore } from "@/store/giftsStore";
 import type { GiftRow as DbGiftRow, PaymentMethod } from "@/db/gifts";
+import { exportCSV, exportPDF } from "@/db/export";
 
 import { PaperBackground } from "@/components/ui/PaperBackground";
 import { MangoFrame } from "@/components/ui/MangoFrame";
@@ -81,7 +84,44 @@ export default function LedgerScreen() {
 							← {t("common.back")}
 						</AppText>
 					</Pressable>
-					<LanguageToggle />
+					<View style={styles.topActions}>
+						{event && gifts.length > 0 && (
+							<Pressable
+								onPress={() => {
+									Alert.alert(
+										t("ledger.export"),
+										t("ledger.exportChoose"),
+										[
+											{
+												text: "CSV",
+												onPress: () =>
+													exportCSV(event, gifts).catch((e) =>
+														console.error("csv export failed", e),
+													),
+											},
+											{
+												text: "PDF",
+												onPress: () =>
+													exportPDF(event, gifts).catch((e) =>
+														console.error("pdf export failed", e),
+													),
+											},
+											{ text: t("common.cancel"), style: "cancel" },
+										],
+									);
+								}}
+								hitSlop={10}
+								style={styles.exportBtn}
+							>
+								<MaterialCommunityIcons
+									name="export-variant"
+									size={22}
+									color={colors.maroon}
+								/>
+							</Pressable>
+						)}
+						<LanguageToggle />
+					</View>
 				</View>
 
 				{loading && !event ? (
@@ -444,6 +484,14 @@ const styles = StyleSheet.create({
 		justifyContent: "space-between",
 		alignItems: "center",
 		marginBottom: spacing.lg,
+	},
+	topActions: {
+		flexDirection: "row",
+		alignItems: "center",
+		gap: spacing.md,
+	},
+	exportBtn: {
+		padding: spacing.xs,
 	},
 	center: {
 		marginTop: spacing.xxxl,

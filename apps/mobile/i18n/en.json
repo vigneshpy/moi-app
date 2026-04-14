@@ -32,7 +32,9 @@
 		"paymentUpi": "UPI",
 		"addTitle": "New moi entry",
 		"requiredFields": "Name and amount are required",
-		"emptyHint": "Tap \"+ New moi\" to record your first entry"
+		"emptyHint": "Tap \"+ New moi\" to record your first entry",
+		"export": "Export",
+		"exportChoose": "Choose export format"
 	},
 	"events": {
 		"title": "Functions",
