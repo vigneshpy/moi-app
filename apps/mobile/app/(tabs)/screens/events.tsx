@@ -1,600 +1,409 @@
-//@ts-nocheck
-import { useEffect, useState, useRef } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import {
 	View,
-	ActivityIndicator,
+	StyleSheet,
 	FlatList,
-	useColorScheme,
-	TouchableOpacity,
+	Pressable,
+	Image,
 	Alert,
+	ActivityIndicator,
 } from "react-native";
-import {
-	Card,
-	Text,
-	Provider as PaperProvider,
-	Divider,
-	FAB,
-	Chip,
-	Badge,
-	Snackbar,
-} from "react-native-paper";
-import { useNavigation } from "@react-navigation/native";
-import { MaterialCommunityIcons } from "@expo/vector-icons";
-import { router } from "expo-router";
-import { useEventsStore } from "@/store/eventsStore";
-import {
-	getCategoryIcon,
-	getEventStatus,
-	getPastEvents,
-	getRelativeTime,
-	getUpcomingEvents,
-} from "./utils";
-import React from "react";
+import { router, useFocusEffect } from "expo-router";
+import { useTranslation } from "react-i18next";
 import Swipeable from "react-native-gesture-handler/Swipeable";
 import {
 	GestureHandlerRootView,
 	RectButton,
 } from "react-native-gesture-handler";
+import { MaterialCommunityIcons } from "@expo/vector-icons";
+
+import { useEventsStore } from "@/store/eventsStore";
+import type { EventWithTotals } from "@/db/events";
+import { getUpcomingEvents, getPastEvents } from "./utils";
+
+import { PaperBackground } from "@/components/ui/PaperBackground";
+import { MaroonButton } from "@/components/ui/MaroonButton";
+import { LanguageToggle } from "@/components/ui/LanguageToggle";
+import { AppText } from "@/components/ui/AppText";
+import { colors, radius, spacing } from "@/theme/tokens";
+
+type Bucket = "upcoming" | "past";
 
 export default function EventListScreen() {
-	const storeEvents = useEventsStore((s) => s.events);
+	const { t, i18n } = useTranslation();
+	const events = useEventsStore((s) => s.events);
+	const loading = useEventsStore((s) => s.loading);
 	const refresh = useEventsStore((s) => s.refresh);
 	const remove = useEventsStore((s) => s.remove);
-	const storeLoading = useEventsStore((s) => s.loading);
 
-	// Expose both `id` and `_id` so downstream code using `_id` still works.
-	const allEvents = storeEvents.map((e) => ({ ...e, _id: e.id }));
+	const [bucket, setBucket] = useState<Bucket>("upcoming");
+	const rowRefs = useRef(new Map<string, Swipeable>());
 
-	const [events, setEvents] = useState({
-		upcomingEvents: getUpcomingEvents(allEvents),
-		pastEvents: getPastEvents(allEvents),
-	});
-
-	const [loading, setLoading] = useState(storeLoading);
-	const [viewMode, setViewMode] = useState("upcoming");
-	const [snackbarVisible, setSnackbarVisible] = useState(false);
-	const [deletedEventName, setDeletedEventName] = useState("");
-	const rowRefs = useRef(new Map());
-
-	const colorScheme = useColorScheme();
-	const navigation = useNavigation();
-
-	const theme = {
-		...defaultTheme,
-		dark: colorScheme === "dark",
-		colors: colorScheme === "dark" ? darkColors : lightColors,
-	};
-
-	// Re-derive upcoming/past buckets whenever the store changes.
-	useEffect(() => {
-		setEvents({
-			upcomingEvents: getUpcomingEvents(allEvents),
-			pastEvents: getPastEvents(allEvents),
-		});
-		setLoading(storeLoading);
-	}, [storeEvents, storeLoading]);
-
-	const fetchEvents = async () => {
-		setLoading(true);
-		try {
-			await refresh();
-		} catch (error) {
-			console.error("Error fetching events:", error);
-		} finally {
-			setLoading(false);
-		}
-	};
-
-	const deleteEvent = async (eventId, eventName) => {
-		try {
-			await remove(eventId);
-			const updatedEvents = allEvents.filter((event) => event._id !== eventId);
-			const updatedAllEvents = {
-				upcomingEvents: getUpcomingEvents(updatedEvents),
-				pastEvents: getPastEvents(updatedEvents),
-			};
-
-			setEvents(updatedAllEvents);
-
-			setDeletedEventName(eventName);
-			setSnackbarVisible(true);
-		} catch (error) {
-			console.error("Error deleting event:", error);
-			Alert.alert("Error", "Failed to delete the event. Please try again.");
-		}
-	};
-
-	const confirmDelete = (event) => {
-		Alert.alert(
-			"Delete Event",
-			`Are you sure you want to delete "${event.event_name}"?`,
-			[
-				{ text: "Cancel", style: "cancel" },
-				{
-					text: "Delete",
-					onPress: () => deleteEvent(event._id, event.event_name),
-					style: "destructive",
-				},
-			]
-		);
-	};
-
-	const handleEventPress = (event) => {
-		router.push({
-			presentation: "modal",
-			pathname: "/modal/events/EventDetails",
-			params: { eventId: event._id },
-		});
-	};
-
-	useEffect(() => {
-		const unsubscribe = navigation.addListener("focus", fetchEvents);
-		return unsubscribe;
-	}, [navigation]);
-
-	const closeRow = (id) => {
-		if (rowRefs.current.has(id)) {
-			rowRefs.current.get(id).close();
-		}
-	};
-
-	const renderRightActions = (event) => {
-		return (
-			<RectButton
-				style={[styles.deleteButton, { backgroundColor: "#FF3B30" }]}
-				onPress={() => {
-					closeRow(event._id);
-					confirmDelete(event);
-				}}
-			>
-				<MaterialCommunityIcons name="delete" size={24} color="white" />
-				<Text style={styles.deleteText}>Delete</Text>
-			</RectButton>
-		);
-	};
-
-	const renderItem = ({ item }) => {
-		const categoryIcon = getCategoryIcon(item.event_description);
-		const relativeTime = getRelativeTime(item.event_date);
-		const status = getEventStatus(item.event_date);
-		const formattedDate = new Date(item.event_date).toLocaleDateString(
-			undefined,
-			{
-				weekday: "short",
-				month: "short",
-				day: "numeric",
-				hour: "2-digit",
-				minute: "2-digit",
-			}
-		);
-
-		return (
-			<Swipeable
-				ref={(ref) => {
-					if (ref) rowRefs.current.set(item._id, ref);
-				}}
-				renderRightActions={() => renderRightActions(item)}
-				renderLeftActions={() => renderRightActions(item)}
-				overshootRight={true}
-				onSwipeableOpen={() => {
-					rowRefs.current.forEach((ref, id) => {
-						if (id !== item._id) ref.close();
-					});
-				}}
-			>
-				<TouchableOpacity onPress={() => handleEventPress(item)}>
-					<Card style={[styles.card, { backgroundColor: theme.colors.card }]}>
-						<View style={styles.cardHeader}>
-							<MaterialCommunityIcons
-								name={categoryIcon}
-								size={24}
-								color={theme.colors.primary}
-								style={styles.categoryIcon}
-							/>
-							<Chip
-								mode="outlined"
-								style={{ backgroundColor: status.color + "20" }}
-								textStyle={{ color: status.color, fontSize: 12 }}
-							>
-								{status.label}
-							</Chip>
-						</View>
-						{item.cover_uri && (
-							<Card.Cover source={{ uri: item.cover_uri }} />
-						)}
-
-						<Card.Content>
-							<Text style={[styles.title, { color: theme.colors.text }]}>
-								{item.event_name}
-							</Text>
-
-							{item.description ? (
-								<Text
-									numberOfLines={2}
-									style={[
-										styles.description,
-										{ color: theme.colors.textSecondary },
-									]}
-								>
-									{item.description}
-								</Text>
-							) : null}
-
-							<Divider style={styles.divider} />
-
-							<View style={styles.detailsContainer}>
-								<View style={styles.detailRow}>
-									<MaterialCommunityIcons
-										name="map-marker"
-										size={16}
-										color={theme.colors.primary}
-									/>
-									<Text style={[styles.text, { color: theme.colors.text }]}>
-										{item.location || "No location specified"}
-									</Text>
-								</View>
-
-								<View style={styles.detailRow}>
-									<MaterialCommunityIcons
-										name="clock-outline"
-										size={16}
-										color={theme.colors.primary}
-									/>
-									<Text style={[styles.text, { color: theme.colors.text }]}>
-										{formattedDate}
-									</Text>
-								</View>
-
-								<View style={styles.timeContainer}>
-									<Text
-										style={[
-											styles.relativeTime,
-											{
-												color: status.color,
-												fontWeight:
-													status.label === "Today" ? "bold" : "normal",
-											},
-										]}
-									>
-										{relativeTime}
-									</Text>
-								</View>
-							</View>
-
-							{item.generate_rsvp && (
-								<View style={styles.rsvpContainer}>
-									<Badge size={8} style={{ backgroundColor: "#ff6d00" }} />
-									<Text
-										style={[
-											styles.rsvpText,
-											{ color: theme.colors.textSecondary },
-										]}
-									>
-										RSVP
-									</Text>
-								</View>
-							)}
-						</Card.Content>
-					</Card>
-				</TouchableOpacity>
-			</Swipeable>
-		);
-	};
-
-	// Tab toggle component
-	const TabToggle = () => (
-		<View style={styles.tabContainer}>
-			<TouchableOpacity
-				style={[
-					styles.tab,
-					viewMode === "upcoming" && {
-						backgroundColor: theme.colors.primary + "20",
-						borderBottomColor: theme.colors.primary,
-						borderBottomWidth: 2,
-					},
-				]}
-				onPress={() => setViewMode("upcoming")}
-			>
-				<Text
-					style={[
-						styles.tabText,
-						{
-							color:
-								viewMode === "upcoming"
-									? theme.colors.primary
-									: theme.colors.textSecondary,
-						},
-					]}
-				>
-					Upcoming ({events.upcomingEvents.length})
-				</Text>
-			</TouchableOpacity>
-
-			<TouchableOpacity
-				style={[
-					styles.tab,
-					viewMode === "past" && {
-						backgroundColor: theme.colors.primary + "20",
-						borderBottomColor: theme.colors.primary,
-						borderBottomWidth: 2,
-					},
-				]}
-				onPress={() => setViewMode("past")}
-			>
-				<Text
-					style={[
-						styles.tabText,
-						{
-							color:
-								viewMode === "past"
-									? theme.colors.primary
-									: theme.colors.textSecondary,
-						},
-					]}
-				>
-					Past ({events.pastEvents.length})
-				</Text>
-			</TouchableOpacity>
-		</View>
+	// Re-load whenever the screen comes into focus — cheap and keeps totals
+	// fresh after returning from the ledger.
+	useFocusEffect(
+		React.useCallback(() => {
+			refresh();
+		}, [refresh]),
 	);
 
-	// Get the current event list based on view mode
-	const currentEvents =
-		viewMode === "upcoming" ? events.upcomingEvents : events.pastEvents;
+	const { upcoming, past } = useMemo(() => {
+		// utils expect rows with event_date
+		const upc = getUpcomingEvents(events as any) as EventWithTotals[];
+		const pst = getPastEvents(events as any) as EventWithTotals[];
+		return { upcoming: upc, past: pst };
+	}, [events]);
+
+	const list = bucket === "upcoming" ? upcoming : past;
+
+	const confirmDelete = (ev: EventWithTotals) => {
+		Alert.alert(
+			t("common.delete"),
+			`"${ev.event_name}"?`,
+			[
+				{ text: t("common.cancel"), style: "cancel" },
+				{
+					text: t("common.delete"),
+					style: "destructive",
+					onPress: () => remove(ev.id),
+				},
+			],
+		);
+	};
+
+	const openDetails = (ev: EventWithTotals) => {
+		router.push({
+			pathname: "/modal/events/EventDetails",
+			params: { eventId: ev.id },
+		});
+	};
+
+	const openLedger = (ev: EventWithTotals) => {
+		router.push({
+			pathname: "/modal/events/Ledger",
+			params: { eventId: ev.id },
+		});
+	};
 
 	return (
 		<GestureHandlerRootView style={{ flex: 1 }}>
-			<PaperProvider theme={theme}>
-				<View
-					style={[
-						styles.container,
-						{ backgroundColor: theme.colors.background },
-					]}
-				>
-					<View style={styles.headerContainer}>
-						<Text style={[styles.headerTitle, { color: theme.colors.text }]}>
-							My Events
-						</Text>
-						<TouchableOpacity
-							onPress={() => {
-								// Implement search or filter functionality
-							}}
-						>
-							<MaterialCommunityIcons
-								name="magnify"
-								size={24}
-								color={theme.colors.text}
-							/>
-						</TouchableOpacity>
-					</View>
-
-					<TabToggle />
-
-					{loading ? (
-						<View style={styles.loadingContainer}>
-							<ActivityIndicator size="large" color={theme.colors.primary} />
-							<Text
-								style={[
-									styles.loadingText,
-									{ color: theme.colors.textSecondary },
-								]}
-							>
-								Loading events...
-							</Text>
-						</View>
-					) : currentEvents.length === 0 ? (
-						<View style={styles.noEventsContainer}>
-							<MaterialCommunityIcons
-								name={
-									viewMode === "upcoming" ? "calendar-plus" : "calendar-check"
-								}
-								size={64}
-								color={theme.colors.textSecondary}
-							/>
-							<Text
-								style={[styles.noEventsTitle, { color: theme.colors.text }]}
-							>
-								{viewMode === "upcoming"
-									? "No upcoming events"
-									: "No past events"}
-							</Text>
-							<Text
-								style={[
-									styles.noEventsText,
-									{ color: theme.colors.textSecondary },
-								]}
-							>
-								{viewMode === "upcoming"
-									? "Tap the '+' button to add a new event"
-									: "Your past events will appear here"}
-							</Text>
-						</View>
-					) : (
-						<FlatList
-							data={currentEvents}
-							keyExtractor={(item) => item._id}
-							renderItem={renderItem}
-							contentContainerStyle={styles.list}
-							showsVerticalScrollIndicator={false}
-						/>
-					)}
-
-					<FAB
-						style={[styles.fab, { backgroundColor: theme.colors.primary }]}
-						icon="plus"
-						color="white"
-						onPress={() => {
-							router.push("/modal/events/AddEvents");
-						}}
-					/>
-
-					<Snackbar
-						visible={snackbarVisible}
-						onDismiss={() => setSnackbarVisible(false)}
-						duration={3000}
-						action={{
-							label: "OK",
-							onPress: () => setSnackbarVisible(false),
-						}}
-					>
-						Event "{deletedEventName}" has been deleted
-					</Snackbar>
+			<PaperBackground>
+				<View style={styles.topBar}>
+					<AppText variant="h2" weight="bold" color={colors.maroon}>
+						{t("events.title")}
+					</AppText>
+					<LanguageToggle />
 				</View>
-			</PaperProvider>
+
+				<View style={styles.tabRow}>
+					<TabPill
+						active={bucket === "upcoming"}
+						label={t("events.upcoming")}
+						count={upcoming.length}
+						onPress={() => setBucket("upcoming")}
+					/>
+					<TabPill
+						active={bucket === "past"}
+						label={t("events.past")}
+						count={past.length}
+						onPress={() => setBucket("past")}
+					/>
+				</View>
+
+				{loading && events.length === 0 ? (
+					<View style={styles.centerFill}>
+						<ActivityIndicator color={colors.maroon} />
+					</View>
+				) : list.length === 0 ? (
+					<EmptyState
+						titleKey="events.emptyTitle"
+						hintKey="events.emptyHint"
+					/>
+				) : (
+					<FlatList
+						data={list}
+						keyExtractor={(e) => e.id}
+						contentContainerStyle={styles.listContent}
+						ItemSeparatorComponent={() => (
+							<View style={{ height: spacing.md }} />
+						)}
+						renderItem={({ item }) => (
+							<Swipeable
+								ref={(r) => {
+									if (r) rowRefs.current.set(item.id, r);
+									else rowRefs.current.delete(item.id);
+								}}
+								renderRightActions={() => (
+									<RectButton
+										style={styles.deleteAction}
+										onPress={() => {
+											rowRefs.current.get(item.id)?.close();
+											confirmDelete(item);
+										}}
+									>
+										<MaterialCommunityIcons
+											name="delete"
+											size={22}
+											color={colors.cream}
+										/>
+										<AppText
+											color={colors.cream}
+											weight="bold"
+											style={{ fontSize: 12, marginTop: 2 }}
+										>
+											{t("common.delete")}
+										</AppText>
+									</RectButton>
+								)}
+							>
+								<EventCard
+									event={item}
+									lang={i18n.language}
+									onPress={() => openLedger(item)}
+									onDetails={() => openDetails(item)}
+								/>
+							</Swipeable>
+						)}
+					/>
+				)}
+
+				<View style={styles.fab}>
+					<MaroonButton
+						label={
+							events.length === 0
+								? t("events.addFirst")
+								: t("events.addAnother")
+						}
+						onPress={() => router.push("/modal/events/AddEvents")}
+					/>
+				</View>
+			</PaperBackground>
 		</GestureHandlerRootView>
 	);
 }
 
-const defaultTheme = {
-	roundness: 10,
-	colors: {},
-};
+function TabPill({
+	active,
+	label,
+	count,
+	onPress,
+}: {
+	active: boolean;
+	label: string;
+	count: number;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			onPress={onPress}
+			style={[styles.tabPill, active && styles.tabPillActive]}
+		>
+			<AppText
+				color={active ? colors.gold : colors.maroon}
+				weight={active ? "bold" : "regular"}
+			>
+				{label} · {count}
+			</AppText>
+		</Pressable>
+	);
+}
 
-const lightColors = {
-	primary: "#6200ee",
-	background: "#f8f9fa",
-	card: "#ffffff",
-	text: "#333333",
-	textSecondary: "#666666",
-	border: "#e0e0e0",
-};
+function EmptyState({
+	titleKey,
+	hintKey,
+}: {
+	titleKey: string;
+	hintKey: string;
+}) {
+	const { t } = useTranslation();
+	return (
+		<View style={styles.centerFill}>
+			<MaterialCommunityIcons
+				name="notebook-outline"
+				size={64}
+				color={colors.gold}
+			/>
+			<AppText
+				variant="h3"
+				weight="bold"
+				color={colors.maroon}
+				align="center"
+				style={{ marginTop: spacing.lg }}
+			>
+				{t(titleKey)}
+			</AppText>
+			<AppText
+				color={colors.inkMuted}
+				align="center"
+				style={{
+					marginTop: spacing.sm,
+					maxWidth: 280,
+					paddingHorizontal: spacing.md,
+				}}
+			>
+				{t(hintKey)}
+			</AppText>
+		</View>
+	);
+}
 
-const darkColors = {
-	primary: "#bb86fc",
-	background: "#121212",
-	card: "#1e1e1e",
-	text: "#ffffff",
-	textSecondary: "#b0b0b0",
-	border: "#2c2c2c",
-};
+function EventCard({
+	event,
+	lang,
+	onPress,
+	onDetails,
+}: {
+	event: EventWithTotals;
+	lang: string;
+	onPress: () => void;
+	onDetails: () => void;
+}) {
+	return (
+		<Pressable onPress={onPress} style={styles.card}>
+			{event.cover_uri ? (
+				<Image source={{ uri: event.cover_uri }} style={styles.cover} />
+			) : (
+				<View style={[styles.cover, styles.coverFallback]}>
+					<MaterialCommunityIcons
+						name="heart-multiple"
+						size={40}
+						color={colors.gold}
+					/>
+				</View>
+			)}
 
-const styles = {
-	container: {
-		flex: 1,
-		padding: 16,
-	},
-	headerContainer: {
+			<View style={styles.cardBody}>
+				<View style={{ flex: 1 }}>
+					<AppText
+						variant="h3"
+						weight="bold"
+						color={colors.maroon}
+						numberOfLines={1}
+					>
+						{event.event_name}
+					</AppText>
+					<AppText
+						variant="small"
+						color={colors.inkMuted}
+						style={{ marginTop: 2 }}
+					>
+						{event.event_date ? formatDate(event.event_date, lang) : ""}
+						{event.location ? `  ·  ${event.location}` : ""}
+					</AppText>
+					<View style={styles.cardStats}>
+						<AppText
+							variant="numeric"
+							weight="bold"
+							color={colors.gold}
+							style={{ fontSize: 16 }}
+						>
+							₹ {event.total_collected.toLocaleString("en-IN")}
+						</AppText>
+						<AppText variant="small" color={colors.inkMuted}>
+							{event.entry_count}
+						</AppText>
+					</View>
+				</View>
+				<Pressable onPress={onDetails} hitSlop={10} style={styles.kebab}>
+					<MaterialCommunityIcons
+						name="information-outline"
+						size={20}
+						color={colors.inkSoft}
+					/>
+				</Pressable>
+			</View>
+		</Pressable>
+	);
+}
+
+function formatDate(iso: string, lang: string): string {
+	try {
+		return new Date(iso).toLocaleDateString(
+			lang === "ta" ? "ta-IN" : "en-IN",
+			{ day: "numeric", month: "short", year: "numeric" },
+		);
+	} catch {
+		return iso;
+	}
+}
+
+const styles = StyleSheet.create({
+	topBar: {
+		paddingTop: spacing.xxl,
+		paddingHorizontal: spacing.lg,
+		paddingBottom: spacing.md,
 		flexDirection: "row",
 		justifyContent: "space-between",
 		alignItems: "center",
-		marginBottom: 16,
 	},
-	headerTitle: {
-		fontSize: 24,
-		fontWeight: "bold",
-	},
-	tabContainer: {
+	tabRow: {
 		flexDirection: "row",
-		marginBottom: 16,
+		paddingHorizontal: spacing.lg,
+		gap: spacing.sm,
+		marginBottom: spacing.md,
 	},
-	tab: {
+	tabPill: {
+		paddingVertical: spacing.xs + 2,
+		paddingHorizontal: spacing.md,
+		borderRadius: radius.pill,
+		borderWidth: 1.2,
+		borderColor: colors.maroon,
+	},
+	tabPillActive: {
+		backgroundColor: colors.maroon,
+	},
+	centerFill: {
 		flex: 1,
-		paddingVertical: 12,
 		alignItems: "center",
+		justifyContent: "center",
+		paddingBottom: 120,
 	},
-	tabText: {
-		fontWeight: "500",
-	},
-	list: {
-		paddingBottom: 80,
+	listContent: {
+		padding: spacing.lg,
+		paddingBottom: 120,
 	},
 	card: {
-		marginBottom: 12,
-		borderRadius: 12,
-		elevation: 3,
+		backgroundColor: colors.cream,
+		borderRadius: radius.lg,
 		overflow: "hidden",
+		borderWidth: 1,
+		borderColor: colors.gold,
 	},
-	cardHeader: {
-		flexDirection: "row",
-		justifyContent: "space-between",
+	cover: {
+		width: "100%",
+		height: 120,
+	},
+	coverFallback: {
 		alignItems: "center",
-		paddingHorizontal: 16,
-		paddingTop: 12,
-	},
-	categoryIcon: {
-		marginRight: 8,
-	},
-	title: {
-		fontSize: 18,
-		fontWeight: "bold",
-		marginVertical: 6,
-	},
-	description: {
-		fontSize: 14,
-		marginBottom: 8,
-	},
-	divider: {
-		marginVertical: 10,
-	},
-	detailsContainer: {
-		marginTop: 4,
-	},
-	detailRow: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginBottom: 6,
-	},
-	text: {
-		fontSize: 14,
-		marginLeft: 8,
-	},
-	timeContainer: {
-		marginTop: 4,
-		alignSelf: "flex-end",
-	},
-	relativeTime: {
-		fontSize: 14,
-		fontStyle: "italic",
-	},
-	rsvpContainer: {
-		flexDirection: "row",
-		alignItems: "center",
-		marginTop: 8,
-	},
-	rsvpText: {
-		fontSize: 12,
-		marginLeft: 6,
-	},
-	noEventsContainer: {
-		flex: 1,
 		justifyContent: "center",
+		backgroundColor: colors.ivoryDeep,
+	},
+	cardBody: {
+		flexDirection: "row",
+		padding: spacing.md,
 		alignItems: "center",
-		padding: 16,
 	},
-	noEventsTitle: {
-		fontSize: 20,
-		fontWeight: "bold",
-		marginTop: 16,
-		marginBottom: 8,
+	cardStats: {
+		flexDirection: "row",
+		alignItems: "baseline",
+		marginTop: spacing.sm,
+		gap: spacing.sm,
 	},
-	noEventsText: {
-		fontSize: 16,
-		textAlign: "center",
+	kebab: {
+		padding: spacing.xs,
 	},
-	loadingContainer: {
-		flex: 1,
+	deleteAction: {
+		width: 80,
+		backgroundColor: colors.maroonDeep,
+		alignItems: "center",
 		justifyContent: "center",
-		alignItems: "center",
-	},
-	loadingText: {
-		marginTop: 16,
-		fontSize: 16,
+		borderTopRightRadius: radius.lg,
+		borderBottomRightRadius: radius.lg,
 	},
 	fab: {
 		position: "absolute",
-		right: 20,
-		bottom: 20,
+		bottom: spacing.xl,
+		left: spacing.xl,
+		right: spacing.xl,
 	},
-	deleteButton: {
-		justifyContent: "center",
-		alignItems: "center",
-		width: 80,
-		height: "100%",
-		flexDirection: "column",
-	},
-	deleteText: {
-		color: "white",
-		fontSize: 12,
-		marginTop: 4,
-	},
-};
+});

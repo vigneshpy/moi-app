@@ -35,6 +35,44 @@
 		"emptyHint": "\"+ புதிய மொய்\" தட்டவும்"
 	},
 	"events": {
-		"openLedger": "பதிவேடு திற"
+		"title": "விசேஷங்கள்",
+		"openLedger": "பதிவேடு திற",
+		"emptyTitle": "விசேஷங்கள் இல்லை",
+		"emptyHint": "திருமணம், பிறந்தநாள் போன்ற விசேஷத்தை சேர்க்க + தட்டவும்.",
+		"addFirst": "+ முதல் விசேஷத்தை சேர்",
+		"addAnother": "+ விசேஷம் சேர்",
+		"upcoming": "வரும்",
+		"past": "கடந்த"
+	},
+	"addEvent": {
+		"title": "புதிய விசேஷம்",
+		"fieldName": "விசேஷத்தின் பெயர்",
+		"namePlaceholder": "உதா. ராவி & திவ்யா திருமணம்",
+		"fieldType": "வகை",
+		"fieldDate": "தேதி & நேரம்",
+		"fieldLocation": "இடம்",
+		"locationPlaceholder": "மண்டபம் / ஊர்",
+		"fieldDescription": "குறிப்புகள்",
+		"descriptionPlaceholder": "நினைவிற்கு (விருப்பம்)",
+		"fieldCover": "அட்டை படம்",
+		"pickCover": "அட்டை படம் தேர்ந்தெடு",
+		"save": "சேமி",
+		"nameRequired": "விசேஷத்தின் பெயர் அவசியம்",
+		"permissionDenied": "கேலரி அனுமதி மறுக்கப்பட்டது",
+		"types": {
+			"wedding": "திருமணம்",
+			"birthday": "பிறந்தநாள்",
+			"corporate": "அலுவலகம்",
+			"other": "மற்றவை"
+		}
+	},
+	"settings": {
+		"title": "அமைப்புகள்",
+		"language": "மொழி",
+		"clearData": "அனைத்து தரவையும் அழி",
+		"clearConfirm": "எல்லா விசேஷங்களையும் மொய் பதிவுகளையும் நீக்கவா? இதை மீட்க முடியாது.",
+		"clearConfirmYes": "அனைத்தையும் அழி",
+		"about": "பற்றி",
+		"aboutBody": "மொய் — திருமணம் & விசேஷ பரிசுகளை பதிய ஒரு உள்ளூர் பதிவேடு. தரவு உங்கள் கைபேசியில் மட்டுமே."
 	}
 }
