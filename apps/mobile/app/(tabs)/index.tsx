@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo } from "react";
 import { View, StyleSheet, ScrollView, Pressable } from "react-native";
-import { useFocusEffect, router } from "expo-router";
+import { router } from "expo-router";
 import { useTranslation } from "react-i18next";
 import { MaterialCommunityIcons } from "@expo/vector-icons";
 
@@ -18,11 +18,10 @@ export default function HomeScreen() {
 	const events = useEventsStore((s) => s.events);
 	const refresh = useEventsStore((s) => s.refresh);
 
-	useFocusEffect(
-		React.useCallback(() => {
-			refresh();
-		}, [refresh]),
-	);
+	useEffect(() => {
+		refresh();
+		// eslint-disable-next-line react-hooks/exhaustive-deps
+	}, []);
 
 	const { grandTotal, totalEntries, upcoming } = useMemo(() => {
 		const now = Date.now();
