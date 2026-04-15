@@ -2,6 +2,7 @@ import { create } from "zustand";
 import {
 	listGiftsForEvent,
 	createGift,
+	updateGift,
 	deleteGift,
 	type GiftInput,
 	type GiftRow,
@@ -15,6 +16,11 @@ interface GiftsState {
 
 	loadFor: (eventId: string) => Promise<void>;
 	add: (input: GiftInput) => Promise<GiftRow>;
+	update: (
+		id: string,
+		eventId: string,
+		patch: Partial<Omit<GiftInput, "event_id">>,
+	) => Promise<GiftRow>;
 	remove: (id: string, eventId: string) => Promise<void>;
 }
 
@@ -46,6 +52,21 @@ export const useGiftsStore = create<GiftsState>((set, get) => ({
 		}));
 		// Refresh the parent event's totals so Events list & header stay current.
 		await useEventsStore.getState().reload(input.event_id);
+		return row;
+	},
+
+	update: async (id, eventId, patch) => {
+		const row = await updateGift(id, patch);
+		set((s) => ({
+			byEvent: {
+				...s.byEvent,
+				[eventId]: (s.byEvent[eventId] ?? []).map((g) =>
+					g.id === id ? row : g,
+				),
+			},
+		}));
+		// Amount may have changed → refresh the event's running totals.
+		await useEventsStore.getState().reload(eventId);
 		return row;
 	},
 

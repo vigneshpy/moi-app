@@ -50,7 +50,7 @@ export async function exportPDF(
 		.map(
 			(g) => `
 		<tr>
-			<td>${he(g.recipient_name)}${g.partner_name ? ` &amp; ${he(g.partner_name)}` : ""}</td>
+			<td>${he(g.recipient_name)}${g.partner_name ? ` - ${he(g.partner_name)}` : ""}</td>
 			<td style="text-align:right">₹ ${g.amount.toLocaleString("en-IN")}</td>
 			<td>${g.payment_method}</td>
 			<td>${g.note ? he(g.note) : ""}</td>

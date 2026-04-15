@@ -59,6 +59,32 @@ export async function createGift(input: GiftInput): Promise<GiftRow> {
 	return row;
 }
 
+export async function updateGift(
+	id: string,
+	input: Partial<Omit<GiftInput, "event_id">>,
+): Promise<GiftRow> {
+	const db = await getDb();
+	const fields: string[] = [];
+	const values: (string | number | null)[] = [];
+	for (const [k, v] of Object.entries(input)) {
+		fields.push(`${k} = ?`);
+		values.push(v as string | number | null);
+	}
+	if (fields.length) {
+		values.push(id);
+		await db.runAsync(
+			`UPDATE gifts SET ${fields.join(", ")} WHERE id = ?`,
+			values,
+		);
+	}
+	const row = await db.getFirstAsync<GiftRow>(
+		"SELECT * FROM gifts WHERE id = ?",
+		[id],
+	);
+	if (!row) throw new Error("gift not found after update");
+	return row;
+}
+
 export async function deleteGift(id: string): Promise<void> {
 	const db = await getDb();
 	await db.runAsync("DELETE FROM gifts WHERE id = ?", [id]);

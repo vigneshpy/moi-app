@@ -23,7 +23,7 @@ export default function HomeScreen() {
 		// eslint-disable-next-line react-hooks/exhaustive-deps
 	}, []);
 
-	const { grandTotal, totalEntries, upcoming } = useMemo(() => {
+	const { grandTotal, totalEntries, upcoming, quickAddEvent } = useMemo(() => {
 		const now = Date.now();
 		let total = 0;
 		let count = 0;
@@ -38,7 +38,15 @@ export default function HomeScreen() {
 					new Date(a.event_date!).getTime() - new Date(b.event_date!).getTime(),
 			)
 			.slice(0, 3);
-		return { grandTotal: total, totalEntries: count, upcoming: upc };
+		// Quick-add target: the nearest upcoming event, else the most recently
+		// created event (events already arrive sorted by created_at DESC).
+		const qa = upc[0] ?? events[0] ?? null;
+		return {
+			grandTotal: total,
+			totalEntries: count,
+			upcoming: upc,
+			quickAddEvent: qa,
+		};
 	}, [events]);
 
 	const hasNoEvents = events.length === 0;
@@ -92,6 +100,51 @@ export default function HomeScreen() {
 						/>
 					</View>
 				</MangoFrame>
+
+				{quickAddEvent && (
+					<Pressable
+						style={({ pressed }) => [
+							styles.quickAddCard,
+							pressed && { opacity: 0.85 },
+						]}
+						onPress={() =>
+							router.push({
+								pathname: "/modal/events/Ledger",
+								params: { eventId: quickAddEvent.id, openAdd: "1" },
+							})
+						}
+					>
+						<View style={styles.quickAddIcon}>
+							<MaterialCommunityIcons
+								name="plus"
+								size={28}
+								color={colors.gold}
+							/>
+						</View>
+						<View style={{ flex: 1 }}>
+							<AppText
+								variant="label"
+								color={colors.inkSoft}
+								style={{ letterSpacing: 0.8 }}
+							>
+								{t("ledger.quickAdd").toUpperCase()}
+							</AppText>
+							<AppText
+								weight="bold"
+								color={colors.maroon}
+								numberOfLines={1}
+								style={{ marginTop: 2 }}
+							>
+								{quickAddEvent.event_name}
+							</AppText>
+						</View>
+						<MaterialCommunityIcons
+							name="chevron-right"
+							size={24}
+							color={colors.gold}
+						/>
+					</Pressable>
+				)}
 
 				<View style={{ marginTop: spacing.xl }}>
 					<AppText
@@ -213,6 +266,25 @@ const styles = StyleSheet.create({
 	},
 	summary: {
 		marginHorizontal: spacing.xs,
+	},
+	quickAddCard: {
+		flexDirection: "row",
+		alignItems: "center",
+		marginTop: spacing.xl,
+		padding: spacing.md,
+		backgroundColor: colors.cream,
+		borderRadius: radius.lg,
+		borderWidth: 1.5,
+		borderColor: colors.gold,
+		gap: spacing.md,
+	},
+	quickAddIcon: {
+		width: 44,
+		height: 44,
+		borderRadius: 22,
+		backgroundColor: colors.maroon,
+		alignItems: "center",
+		justifyContent: "center",
 	},
 	metricsRow: {
 		flexDirection: "row",

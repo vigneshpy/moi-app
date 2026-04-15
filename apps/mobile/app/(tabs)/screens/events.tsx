@@ -198,6 +198,8 @@ function TabPill({
 			<AppText
 				color={active ? colors.gold : colors.maroon}
 				weight={active ? "bold" : "regular"}
+				numberOfLines={1}
+				align="center"
 			>
 				{label} · {count}
 			</AppText>
@@ -340,11 +342,13 @@ const styles = StyleSheet.create({
 		marginBottom: spacing.md,
 	},
 	tabPill: {
+		flex: 1,
 		paddingVertical: spacing.xs + 2,
 		paddingHorizontal: spacing.md,
 		borderRadius: radius.pill,
 		borderWidth: 1.2,
 		borderColor: colors.maroon,
+		alignItems: "center",
 	},
 	tabPillActive: {
 		backgroundColor: colors.maroon,
