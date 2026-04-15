@@ -11,7 +11,7 @@
     "splash": {
       "image": "./assets/images/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#8B1A2A"
     },
     "ios": {
       "supportsTablet": true
@@ -19,9 +19,9 @@
     "android": {
       "adaptiveIcon": {
         "foregroundImage": "./assets/images/adaptive-icon.png",
-        "backgroundColor": "#ffffff"
+        "backgroundColor": "#8B1A2A"
       },
-      "package": "com.vigneshpy.moiapp"
+      "package": "com.moi.vigneshpy"
     },
     "web": {
       "bundler": "metro",

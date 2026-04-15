@@ -180,9 +180,29 @@ export default function EventDetailScreen() {
 
 					<KolamDivider compact />
 
+					{/* Primary action — open the ledger for this event. Sits above
+					    the stats tile so it's visible without scrolling. */}
+					<MaroonButton
+						label={t("events.openLedger")}
+						onPress={() =>
+							router.push({
+								pathname: "/modal/events/Ledger",
+								params: { eventId: String(eventId) },
+							})
+						}
+					/>
+
 					{/* Stats */}
-					<View style={styles.statsRow}>
-						<View style={styles.statTile}>
+					<View style={[styles.statsRow, { marginTop: spacing.lg }]}>
+						<Pressable
+							onPress={() =>
+								router.push({
+									pathname: "/modal/events/Ledger",
+									params: { eventId: String(eventId) },
+								})
+							}
+							style={styles.statTile}
+						>
 							<AppText
 								variant="label"
 								color={colors.goldLight}
@@ -210,21 +230,9 @@ export default function EventDetailScreen() {
 									? t("ledger.people")
 									: t("ledger.entries")}
 							</AppText>
-						</View>
+						</Pressable>
 					</View>
 				</MangoFrame>
-
-				<View style={styles.actions}>
-					<MaroonButton
-						label={t("events.openLedger")}
-						onPress={() =>
-							router.push({
-								pathname: "/modal/events/Ledger",
-								params: { eventId: String(eventId) },
-							})
-						}
-					/>
-				</View>
 			</ScrollView>
 		</PaperBackground>
 	);

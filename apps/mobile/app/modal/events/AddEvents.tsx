@@ -210,6 +210,7 @@ export default function AddEvents() {
 			<DateTimePickerModal
 				isVisible={isDatePickerVisible}
 				mode="datetime"
+				date={eventDate}
 				onConfirm={(d) => {
 					setEventDate(d);
 					setDatePickerVisibility(false);
