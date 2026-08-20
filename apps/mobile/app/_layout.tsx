@@ -8,6 +8,7 @@ import { Stack } from "expo-router";
 import * as SplashScreen from "expo-splash-screen";
 import { useEffect } from "react";
 import { useAppFonts } from "@/theme/useFonts";
+import { cleanupOrphanedMedia } from "@/db/notebook";
 import "@/i18n";
 import React from "react";
 
@@ -20,6 +21,12 @@ export default function RootLayout() {
 	useEffect(() => {
 		if (fontsLoaded) SplashScreen.hideAsync().catch(() => {});
 	}, [fontsLoaded]);
+
+	// Collect cover and notebook-page files that no row points at any more.
+	// Best-effort — an orphaned file is never worth blocking startup over.
+	useEffect(() => {
+		cleanupOrphanedMedia().catch(() => {});
+	}, []);
 
 	if (!fontsLoaded) return null;
 
@@ -37,6 +44,18 @@ export default function RootLayout() {
 				/>
 				<Stack.Screen
 					name="modal/events/Ledger"
+					options={{ presentation: "card" }}
+				/>
+				<Stack.Screen
+					name="modal/events/FastEntry"
+					options={{ presentation: "card" }}
+				/>
+				<Stack.Screen
+					name="modal/events/NotebookEntry"
+					options={{ presentation: "card" }}
+				/>
+				<Stack.Screen
+					name="modal/events/NotebookPages"
 					options={{ presentation: "card" }}
 				/>
 			</Stack>

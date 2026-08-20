@@ -16,8 +16,9 @@ import * as ImagePicker from "expo-image-picker";
 import DateTimePickerModal from "react-native-modal-datetime-picker";
 
 import { useEventsStore } from "@/store/eventsStore";
+import { useGiftsStore } from "@/store/giftsStore";
 import { saveCover } from "@/db/media";
-import type { EventType } from "@/db/events";
+import type { Direction, EventType } from "@/db/events";
 
 import { PaperBackground } from "@/components/ui/PaperBackground";
 import { MangoFrame } from "@/components/ui/MangoFrame";
@@ -40,12 +41,17 @@ export default function AddEvents() {
 	const { t, i18n } = useTranslation();
 	const navigation = useNavigation();
 	const addEventToStore = useEventsStore((s) => s.add);
+	const addGift = useGiftsStore((s) => s.add);
 
 	const [eventName, setEventName] = useState("");
+	const [direction, setDirection] = useState<Direction>("HOSTED");
+	const [hostFamily, setHostFamily] = useState("");
+	const [givenBy, setGivenBy] = useState("");
 	const [eventType, setEventType] = useState<EventType>("wedding");
 	const [eventDescription, setEventDescription] = useState("");
 	const [location, setLocation] = useState("");
 	const [eventDate, setEventDate] = useState<Date>(new Date());
+	const [amountGiven, setAmountGiven] = useState("");
 	const [image, setImage] = useState<string | null>(null);
 
 	const [isDatePickerVisible, setDatePickerVisibility] = useState(false);
@@ -71,18 +77,38 @@ export default function AddEvents() {
 			setErr(t("addEvent.nameRequired"));
 			return;
 		}
+		if (direction === "ATTENDED" && !hostFamily.trim()) {
+			setErr(t("addEvent.hostRequired"));
+			return;
+		}
 		try {
 			setSaving(true);
 			setErr(null);
 			const coverUri = image ? await saveCover(image) : null;
-			await addEventToStore({
+			const created = await addEventToStore({
 				event_name: eventName.trim(),
 				event_type: eventType,
 				event_date: eventDate.toISOString(),
 				location: location.trim() || null,
 				description: eventDescription.trim() || null,
 				cover_uri: coverUri,
+				direction,
+				host_family_name:
+					direction === "ATTENDED" ? hostFamily.trim() : null,
 			});
+
+			// An attended function starts with the moi we gave, recorded against
+			// the host family so it lines up with their side of the history.
+			const amt = Number(amountGiven.replace(/[^\d.]/g, ""));
+			if (direction === "ATTENDED" && amt > 0) {
+				await addGift({
+					event_id: created.id,
+					recipient_name: hostFamily.trim(),
+					amount: amt,
+					given_by: givenBy.trim() || null,
+					gift_date: eventDate.getTime(),
+				});
+			}
 			navigation.goBack();
 		} catch (e: any) {
 			console.error("add event failed", e);
@@ -128,12 +154,56 @@ export default function AddEvents() {
 						</AppText>
 						<KolamDivider compact />
 
+						{/* Moi runs both ways: we host and receive, or we attend and
+						    give. Everything below adapts to the choice. */}
+						<Label>{t("addEvent.fieldDirection")}</Label>
+						<View style={styles.directionRow}>
+							<DirectionChip
+								active={direction === "HOSTED"}
+								label={t("addEvent.directionHosted")}
+								hint={t("addEvent.directionHostedHint")}
+								onPress={() => setDirection("HOSTED")}
+							/>
+							<DirectionChip
+								active={direction === "ATTENDED"}
+								label={t("addEvent.directionAttended")}
+								hint={t("addEvent.directionAttendedHint")}
+								onPress={() => setDirection("ATTENDED")}
+							/>
+						</View>
+
 						<Label>{t("addEvent.fieldName")}</Label>
 						<Input
 							value={eventName}
 							onChangeText={setEventName}
 							placeholder={t("addEvent.namePlaceholder")}
 						/>
+
+						{direction === "ATTENDED" && (
+							<>
+								<Label>{t("addEvent.fieldHostFamily")}</Label>
+								<Input
+									value={hostFamily}
+									onChangeText={setHostFamily}
+									placeholder={t("addEvent.hostFamilyPlaceholder")}
+								/>
+
+								<Label>{t("addEvent.fieldAmountGiven")}</Label>
+								<Input
+									value={amountGiven}
+									onChangeText={(v) => setAmountGiven(v.replace(/[^\d]/g, ""))}
+									placeholder={t("ledger.amountPlaceholder")}
+									keyboardType="number-pad"
+								/>
+
+								<Label>{t("addEvent.fieldGivenBy")}</Label>
+								<Input
+									value={givenBy}
+									onChangeText={setGivenBy}
+									placeholder={t("addEvent.givenByPlaceholder")}
+								/>
+							</>
+						)}
 
 						<Label>{t("addEvent.fieldType")}</Label>
 						<View style={styles.typeRow}>
@@ -243,6 +313,41 @@ function Input(props: React.ComponentProps<typeof TextInput>) {
 	);
 }
 
+function DirectionChip({
+	active,
+	label,
+	hint,
+	onPress,
+}: {
+	active: boolean;
+	label: string;
+	hint: string;
+	onPress: () => void;
+}) {
+	return (
+		<Pressable
+			onPress={onPress}
+			style={[styles.directionChip, active && styles.chipActive]}
+		>
+			<AppText
+				color={active ? colors.gold : colors.maroon}
+				weight="bold"
+				style={{ fontSize: 14 }}
+			>
+				{label}
+			</AppText>
+			<AppText
+				variant="small"
+				color={active ? colors.goldLight : colors.inkMuted}
+				align="center"
+				style={{ marginTop: 2 }}
+			>
+				{hint}
+			</AppText>
+		</Pressable>
+	);
+}
+
 function TypeChip({
 	active,
 	label,
@@ -300,6 +405,19 @@ const styles = StyleSheet.create({
 		flexDirection: "row",
 		flexWrap: "wrap",
 		gap: spacing.sm,
+	},
+	directionRow: {
+		flexDirection: "row",
+		gap: spacing.sm,
+	},
+	directionChip: {
+		flex: 1,
+		paddingVertical: spacing.md,
+		paddingHorizontal: spacing.sm,
+		borderRadius: radius.lg,
+		borderWidth: 1.5,
+		borderColor: colors.maroon,
+		alignItems: "center",
 	},
 	chip: {
 		paddingVertical: spacing.sm,

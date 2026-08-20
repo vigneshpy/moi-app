@@ -18,11 +18,22 @@ export function getDb(): Promise<SQLite.SQLiteDatabase> {
 			const current = row.user_version;
 
 			for (let v = current + 1; v <= SCHEMA_VERSION; v++) {
-				const sql = MIGRATIONS[v];
-				if (!sql) continue;
-				await db.execAsync(sql);
-				// user_version can't be parameterized — it takes a literal integer
-				await db.execAsync(`PRAGMA user_version = ${v}`);
+				const migration = MIGRATIONS[v];
+				if (!migration) continue;
+
+				// Run the step and its version bump together. If anything throws,
+				// the transaction rolls back and user_version stays put, so the
+				// whole migration is retried cleanly on the next launch rather
+				// than leaving a half-migrated database behind.
+				await db.withTransactionAsync(async () => {
+					if (typeof migration === "string") {
+						await db.execAsync(migration);
+					} else {
+						await migration(db);
+					}
+					// user_version can't be parameterized — it takes a literal integer
+					await db.execAsync(`PRAGMA user_version = ${v}`);
+				});
 			}
 			return db;
 		})();
