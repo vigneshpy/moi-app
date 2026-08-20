@@ -31,7 +31,13 @@
     "plugins": [
       "expo-router",
       "expo-secure-store",
-      "expo-image-picker",
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "Moi uses your photos so you can attach pictures of your notebook pages and function covers. They stay on this device.",
+          "cameraPermission": "Moi uses the camera so you can photograph your notebook pages. The photos stay on this device."
+        }
+      ],
       "expo-sqlite"
     ],
     "experiments": {

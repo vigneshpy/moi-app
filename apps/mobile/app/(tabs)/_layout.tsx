@@ -48,6 +48,15 @@ export default function TabLayout() {
 				}}
 			/>
 			<Tabs.Screen
+				name="screens/reciprocity"
+				options={{
+					title: "History",
+					tabBarIcon: ({ color }) => (
+						<TabIcon name="account-search-outline" color={color} />
+					),
+				}}
+			/>
+			<Tabs.Screen
 				name="screens/profile"
 				options={{
 					title: "Settings",

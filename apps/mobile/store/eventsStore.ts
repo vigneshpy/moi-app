@@ -7,7 +7,8 @@ import {
 	type EventInput,
 	type EventWithTotals,
 } from "@/db/events";
-import { deleteCover } from "@/db/media";
+import { deleteCover, deleteNotebookPageFile } from "@/db/media";
+import { pageUrisForEvent } from "@/db/notebook";
 
 interface EventsState {
 	events: EventWithTotals[];
@@ -36,18 +37,25 @@ export const useEventsStore = create<EventsState>((set, get) => ({
 	},
 
 	add: async (input) => {
-		await createEvent(input);
+		// Use the id createEvent returns rather than looking the row back up by
+		// name — two functions can legitimately share a name.
+		const created = await createEvent(input);
 		await get().refresh();
-		const fresh = get().events.find(
-			(e) => e.event_name === input.event_name,
-		);
-		return fresh!;
+		const fresh = get().events.find((e) => e.id === created.id);
+		return fresh ?? { ...created, total_collected: 0, entry_count: 0 };
 	},
 
 	remove: async (id) => {
 		const existing = get().events.find((e) => e.id === id);
+		// Collect the page files before the rows go: the FK cascade clears
+		// notebook_pages but cannot touch the files on disk.
+		const pageUris = await pageUrisForEvent(id);
+
 		await deleteEvent(id);
+
 		if (existing?.cover_uri) await deleteCover(existing.cover_uri);
+		for (const uri of pageUris) await deleteNotebookPageFile(uri);
+
 		set((s) => ({ events: s.events.filter((e) => e.id !== id) }));
 	},
 

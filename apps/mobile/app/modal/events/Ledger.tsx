@@ -393,10 +393,19 @@ export default function LedgerScreen() {
 				/>
 			)}
 
+			{/* Tap goes to fast entry — the common case during a function.
+			    Long-press opens the full form for notes, partner and method. */}
 			<Pressable
 				style={({ pressed }) => [styles.fab, pressed && styles.fabPressed]}
-				onPress={() => setShowAdd(true)}
-				accessibilityLabel={t("ledger.addEntry")}
+				onPress={() =>
+					router.push({
+						pathname: "/modal/events/FastEntry",
+						params: { eventId: String(eventId) },
+					})
+				}
+				onLongPress={() => setShowAdd(true)}
+				accessibilityLabel={t("fastEntry.title")}
+				accessibilityHint={t("fastEntry.fabHint")}
 				hitSlop={8}
 			>
 				<MaterialCommunityIcons name="plus" size={32} color={colors.gold} />

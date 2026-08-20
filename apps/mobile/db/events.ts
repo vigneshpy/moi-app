@@ -2,6 +2,12 @@ import { getDb, generateId } from "./index";
 
 export type EventType = "wedding" | "birthday" | "corporate" | "other";
 
+/**
+ * HOSTED  — our function; the moi recorded against it came to us.
+ * ATTENDED — someone else's function; the moi recorded against it went out.
+ */
+export type Direction = "HOSTED" | "ATTENDED";
+
 export interface EventRow {
 	id: string;
 	event_name: string;
@@ -11,6 +17,9 @@ export interface EventRow {
 	description: string | null;
 	cover_uri: string | null;
 	budget: number | null;
+	direction: Direction;
+	/** ATTENDED only — whose function it was. */
+	host_family_name: string | null;
 	created_at: number;
 }
 
@@ -27,6 +36,8 @@ export interface EventInput {
 	description?: string | null;
 	cover_uri?: string | null;
 	budget?: number | null;
+	direction?: Direction;
+	host_family_name?: string | null;
 }
 
 export async function listEvents(): Promise<EventWithTotals[]> {
@@ -65,8 +76,9 @@ export async function createEvent(input: EventInput): Promise<EventRow> {
 	const id = generateId();
 	await db.runAsync(
 		`INSERT INTO events
-			(id, event_name, event_type, event_date, location, description, cover_uri, budget)
-		 VALUES (?, ?, ?, ?, ?, ?, ?, ?)`,
+			(id, event_name, event_type, event_date, location, description, cover_uri,
+			 budget, direction, host_family_name)
+		 VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
 		[
 			id,
 			input.event_name,
@@ -76,6 +88,8 @@ export async function createEvent(input: EventInput): Promise<EventRow> {
 			input.description ?? null,
 			input.cover_uri ?? null,
 			input.budget ?? null,
+			input.direction ?? "HOSTED",
+			input.host_family_name ?? null,
 		],
 	);
 	const row = await db.getFirstAsync<EventRow>(

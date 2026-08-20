@@ -192,6 +192,20 @@ export default function EventDetailScreen() {
 						}
 					/>
 
+					{/* Notebook pages for this function — attach photos of the
+					    original and transcribe from them. */}
+					<MaroonButton
+						label={t("notebook.openPages")}
+						variant="outline"
+						onPress={() =>
+							router.push({
+								pathname: "/modal/events/NotebookPages",
+								params: { eventId: String(eventId) },
+							})
+						}
+						style={{ marginTop: spacing.sm }}
+					/>
+
 					{/* Stats */}
 					<View style={[styles.statsRow, { marginTop: spacing.lg }]}>
 						<Pressable
