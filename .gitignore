@@ -6,6 +6,14 @@ dist/
 build/
 *.tsbuildinfo
 
+# expo local caches and logs
+.expo/
+.expo-shared/
+
+# this repo uses pnpm (see packageManager); other lockfiles are byproducts
+package-lock.json
+yarn.lock
+
 # env
 .env
 .env.*.local
